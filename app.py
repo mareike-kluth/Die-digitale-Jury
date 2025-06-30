@@ -14,7 +14,7 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("📐 Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
+st.title("Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
 
 st.markdown("""
 Dieses Tool bewertet deinen Entwurf anhand von 13 objektiven Kriterien aus den Shapefiles.  
@@ -29,7 +29,7 @@ Die Kriterien werden automatisch berechnet und anschließend mit einem trainiert
 # -------------------------------------------
 # Random-Forest-Modell laden
 # -------------------------------------------
-MODEL_PATH = "best_rf_model.pkl"
+MODEL_PATH = "final_rf_model.pkl"
 
 try:
     rf_model = joblib.load(MODEL_PATH)
