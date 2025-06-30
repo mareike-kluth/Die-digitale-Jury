@@ -1,4 +1,5 @@
 streamlit
+geopandas
 pandas
 scikit-learn
 joblib
