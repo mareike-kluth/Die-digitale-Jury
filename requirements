@@ -1,10 +1,6 @@
 streamlit
-geopandas
+geopandas[all]
 pandas
 scikit-learn
 joblib
 openpyxl
-shapely
-fiona
-pyproj
-rtree
