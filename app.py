@@ -4,7 +4,6 @@ import zipfile
 import tempfile
 import os
 import subprocess
-import geopandas as gpd
 import pandas as pd
 import joblib
 
