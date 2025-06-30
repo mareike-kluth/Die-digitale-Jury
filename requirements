@@ -4,6 +4,7 @@ pandas
 scikit-learn
 joblib
 openpyxl
+shapely
 fiona
 pyproj
-shapely
+rtree
