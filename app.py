@@ -124,19 +124,31 @@ if uploaded_files:
                 # --- Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
 
+                # --- Skript ausführen
+                shutil.copy("shpVerknuepfung.py", tmpdir)
+                
                 result = subprocess.run(
                     [sys.executable, "shpVerknuepfung.py", tmpdir],
                     cwd=tmpdir,
                     capture_output=True,
                     text=True
                 )
-
+                
+                # Debug: Zeige die Standard-Ausgabe
+                st.subheader("🔍 Debug-Ausgabe von shpVerknuepfung.py")
+                st.code(result.stdout)
+                
+                # Debug: Zeige die Fehler-Ausgabe (falls vorhanden)
+                if result.stderr:
+                    st.subheader("⚠️ Fehler-Ausgabe")
+                    st.code(result.stderr)
+                
                 if result.returncode != 0:
                     st.error("Fehler beim Ausführen von `shpVerknuepfung.py`!")
-                    st.code(result.stderr)
                     st.stop()
                 else:
                     st.success("shpVerknuepfung.py erfolgreich ausgeführt!")
+
 
                 # --- Ergebnisse einlesen & Modell anwenden
                 kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
