@@ -140,7 +140,7 @@ if uploaded_files:
 
                 # --- Ergebnisse einlesen & Modell anwenden
                 kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
-                if os.path.exists(kriterien_path):
+                    if os.path.exists(kriterien_path):
                     df = pd.read_excel(kriterien_path).fillna(0)
                     kriterien_spalten = [col for col in df.columns if col.startswith("K")]
                     prediction = rf_model.predict(df[kriterien_spalten])[0]
