@@ -8,6 +8,7 @@ import pandas as pd
 import geopandas as gpd
 import joblib
 import glob
+import sys
 
 
 # Einstellungen & Metadaten
@@ -117,11 +118,11 @@ if uploaded_files:
                 shutil.copy("shpVerknuepfung.py", tmpdir)
 
                 result = subprocess.run(
-                    ["python", "shpVerknuepfung.py", tmpdir],
+                    [sys.executable, "shpVerknuepfung.py", tmpdir],
                     cwd=tmpdir,
                     capture_output=True,
                     text=True
-                )
+                    )
 
                 if result.returncode != 0:
                     st.error("Fehler beim Ausführen von `shpVerknuepfung.py`!")
