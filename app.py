@@ -16,9 +16,8 @@ st.set_page_config(
 st.title("Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
 
 st.markdown("""
-## **Anleitung**
-
-Willkommen bei **Die Digitalen Jury**!  
+## 
+Willkommen bei der **digitalen Jury**!  
 Dieses Tool bewertet städtebauliche Entwürfe **automatisch** anhand von **13 Kriterien** mit einem trainierten **Random-Forest-Modell**.
 
 ---
@@ -55,7 +54,7 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (soweit vorhan
 
 ---
 
-### ℹ️ **Hinweise**
+### **Hinweise**
 
 - Fehlende Layer führen zu einer automatischen `0`-Bewertung für das jeweilige Kriterium.
 - Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
@@ -64,7 +63,7 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (soweit vorhan
 
 ---
 
-### ⬆️ **Hochladen**
+### **Hochladen**
 
 Nutze das Upload-Feld unten, um deine **ZIP-Datei** hochzuladen.  
 Du kannst auch **mehrere ZIPs gleichzeitig** hochladen, um Entwürfe direkt zu vergleichen.
@@ -100,46 +99,48 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True
 )
 
-if uploaded_file:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        zip_path = os.path.join(tmpdir, "upload.zip")
-        with open(zip_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            zip_path = os.path.join(tmpdir, "upload.zip")
+            with open(zip_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(tmpdir)
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(tmpdir)
 
-        st.info("Dateien entpackt. Berechne Kriterien...")
+            st.info(f"Dateien aus **{uploaded_file.name}** entpackt. Berechne Kriterien...")
 
-        subprocess.run(["python", "shpVerknuepfung.py", tmpdir], check=True)
+            subprocess.run(["python", "shpVerknuepfung.py", tmpdir], check=True)
 
-        kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
-        if not os.path.exists(kriterien_path):
-            st.error("❌ Kriterien-Datei wurde nicht erstellt.")
-            st.stop()
+            kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
+            if not os.path.exists(kriterien_path):
+                st.error("Kriterien-Datei wurde nicht erstellt.")
+                st.stop()
 
-        df = pd.read_excel(kriterien_path)
+            df = pd.read_excel(kriterien_path)
 
-        for k in ["K001", "K014"]:
-            if k in df.columns:
-                df.drop(columns=[k], inplace=True)
+            for k in ["K001", "K014"]:
+                if k in df.columns:
+                    df.drop(columns=[k], inplace=True)
 
-        df = df.fillna(0)
+            df = df.fillna(0)
 
-        kriterien_spalten = [col for col in df.columns if col.startswith("K")]
-        prediction = rf_model.predict(df[kriterien_spalten])[0]
+            kriterien_spalten = [col for col in df.columns if col.startswith("K")]
+            prediction = rf_model.predict(df[kriterien_spalten])[0]
 
-        st.success(f"⭐️ Ergebnis: **{int(prediction)} Sterne**")
+            st.success(f"⭐️ Ergebnis für **{uploaded_file.name}**: **{int(prediction)} Sterne**")
 
-        st.dataframe(df)
+            st.dataframe(df)
 
-        df["Anzahl Sterne"] = int(prediction)
-        output_path = os.path.join(tmpdir, "Bewertung_Digitale_Jury.xlsx")
-        df.to_excel(output_path, index=False)
-        with open(output_path, "rb") as f:
-            st.download_button(
-                label="Ergebnis als Excel herunterladen",
-                data=f,
-                file_name="Bewertung_Digitale_Jury.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            df["Anzahl Sterne"] = int(prediction)
+            output_path = os.path.join(tmpdir, f"Bewertung_{uploaded_file.name}.xlsx")
+            df.to_excel(output_path, index=False)
+            with open(output_path, "rb") as f:
+                st.download_button(
+                    label=f"Ergebnis für **{uploaded_file.name}** herunterladen",
+                    data=f,
+                    file_name=f"Bewertung_{uploaded_file.name}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
