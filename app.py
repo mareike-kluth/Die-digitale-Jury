@@ -119,7 +119,7 @@ if uploaded_files:
                         fehlen.append(layer)
 
                 if fehlen:
-                    st.warning(f"Achtung: Folgende Layer fehlen und werden als 0 bewertet: {', '.join(fehlen)}")
+                    st.warning(f"Achtung: Folgende Layer fehlen: {', '.join(fehlen)}")
 
                 # --- Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
