@@ -1,3 +1,4 @@
+
 # SHP verarbeiten - 13 Kriterien
 import geopandas as gpd
 import pandas as pd
@@ -285,3 +286,4 @@ except:
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
 print("Kriterienbewertung", k)
+print(df_kriterien)
