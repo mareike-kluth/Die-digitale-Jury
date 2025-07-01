@@ -1,9 +1,4 @@
-"""
-created: 2025
-@author: Mareike Kluth
-purpose: Diplomarbeit - Die digitale Jury
-"""
-# SHP verarbeiten → K001–K015
+# SHP verarbeiten - 13 Kriterien
 import geopandas as gpd
 import pandas as pd
 import os
@@ -11,7 +6,7 @@ import numpy as np
 import sys
 
 # Projektpfad
-projektpfad = sys.argv[1] if len(sys.argv) > 1 else "C:/Project_shp/"
+projektpfad = sys.argv[1] if len(sys.argv) > 1 else "."
 
 # Hilfsfunktion zum sicheren Laden
 layer_namen = [
@@ -72,6 +67,7 @@ except:
     k["K002"] = np.nan
     print("K002: Mobilitätsbewertung konnte nicht durchgeführt werden.")
 
+
 # K003 - Anteil der Freiflaechen
 try:
     gruenflaeche = sum([
@@ -83,6 +79,7 @@ try:
 except:
     k["K003"] = np.nan
     print("K003: Anteil der Freiflächen konnte nicht berechnet werden.")
+
 
 # K004 - Einbettung in die Umgebung
 try:
@@ -102,7 +99,8 @@ except:
     k["K004"] = np.nan
     print("K004: Einbettung in Umgebung konnte nicht berechnet werden.")
 
-# ----- K005 - Laermschutz ------
+
+# K005 - Laermschutz 
 try:
     g = get("Gebaeude")
     v = get("Verkehrsflaechen")
@@ -132,6 +130,7 @@ try:
 except:
     k["K005"] = np.nan
     print("K005: Lärmschutzbewertung konnte nicht berechnet werden.")
+
 
 # K006 - Erhalt Bestandsgebaeude
 # Anteil neuer Gebäude, die auf Bestand stehen
@@ -182,6 +181,7 @@ except:
     k["K008"] = np.nan
     print("K008: Vielfältige Freiflächen konnten nicht berechnet werden.")
 
+
 # K009 - Zugang zum Wasser
 # Skala: 0 = kein Wasser, 1 = funktional, 2 = erlebbar
 try:
@@ -203,6 +203,7 @@ except:
     k["K009"] = np.nan
     print("K009: Zugang zum Wasser konnte nicht bewertet werden.")
 
+
 # K010 - Entsiegelung
 # Veränderung des Grünflächenanteils (neu vs. Bestand)
 try:
@@ -218,6 +219,7 @@ try:
 except:
     k["K010"] = np.nan
     print("K010: Entsiegelung konnte nicht berechnet werden.")
+
 
 # K011 - Rettungswege, Mindestwegbreite
 try:
@@ -238,6 +240,7 @@ try:
 except:
     k["K011"] = np.nan
     print("K011: Rettungswege konnten nicht überprüft werden.")
+
 
 # K012 - Anteil Dachbegruenung
 # Gesamte Gebäudefläche = angenommene Dachfläche
