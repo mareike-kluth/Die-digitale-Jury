@@ -1,6 +1,6 @@
 streamlit
 geopandas
 pandas
-joblib
-scikit-learn
+scikit-learn==1.4.2
+joblib==1.4.2
 openpyxl
