@@ -88,64 +88,70 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    # Modell erst jetzt laden:
-    MODEL_PATH = "final_RF_model.pkl"
-
-    try:
-        rf_model = joblib.load(MODEL_PATH)
-        st.success("✅ Bewertungsmodell erfolgreich geladen.")
-    except Exception as e:
-        import traceback
-        st.error(f"❌ Bewertungsmodell konnte nicht geladen werden: {e}")
-        st.code(traceback.format_exc())
-
     for zip_file in uploaded_files:
-        st.write(f" **Hochgeladen:** `{zip_file.name}`")
-
-        with st.spinner("Entpacke und verarbeite ZIP …"):
+        st.write(f"Hochgeladen: `{zip_file.name}`")
+        with st.spinner("Verarbeite Entwurf ..."):
             with tempfile.TemporaryDirectory() as tmpdir:
-                # ZIP entpacken
+                # --- Entpacken
                 with zipfile.ZipFile(zip_file, "r") as zip_ref:
                     zip_ref.extractall(tmpdir)
 
-                # shpVerknuepfung.py ausführen
-                try:
-                    subprocess.run(
-                        ["python", "shpVerknuepfung.py", tmpdir],
-                        cwd=tmpdir,
-                        check=True
-                    )
-                except Exception as e:
-                    st.error(f"Fehler beim Ausführen des Skripts: {e}")
-                    continue
+                # --- Erwartete Layer prüfen
+                erwartete_layer = [
+                    "Gebaeude.shp", "Gebaeude_Umgebung.shp", "Verkehrsflaechen.shp", "Verkehrsmittellinie.shp",
+                    "Dachgruen.shp", "PV_Anlage.shp", "oeffentliche_Gruenflaechen.shp", "private_Gruenflaechen.shp",
+                    "Wasser.shp", "Baeume_Entwurf.shp", "Bestandsbaeume.shp", "Bestandsgruen.shp", "Gebietsabgrenzung.shp"
+                ]
 
-                # Ergebnisse laden
+                fehlen = []
+                for layer in erwartete_layer:
+                    if not glob.glob(os.path.join(tmpdir, layer)):
+                        fehlen.append(layer)
+
+                if fehlen:
+                    st.warning(f"Achtung: Folgende Layer fehlen und werden als 0 bewertet: {', '.join(fehlen)}")
+
+                # --- Skript ausführen
+                shutil.copy("shpVerknuepfung.py", tmpdir)
+                shutil.copy("Bewertungsmatrix.xlsx", tmpdir)
+
+                result = subprocess.run(
+                    ["python", "shpVerknuepfung.py", tmpdir],
+                    cwd=tmpdir,
+                    capture_output=True,
+                    text=True
+                )
+
+                if result.returncode != 0:
+                    st.error("Fehler beim Ausführen von `shpVerknuepfung.py`!")
+                    st.code(result.stderr)
+                    st.stop()
+                else:
+                    st.success("shpVerknuepfung.py erfolgreich ausgeführt!")
+
+                # --- Ergebnisse einlesen & Modell anwenden
                 kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
                 if os.path.exists(kriterien_path):
-                    df = pd.read_excel(kriterien_path)
-                    df = df.fillna(0)
-
-                    kriterien = [col for col in df.columns if col.startswith("K")]
-                    vorhersage = rf_model.predict(df[kriterien])[0]
-
-                    sterne = int(vorhersage)
-                    st.success(f"⭐️ Bewertung: {sterne} Sterne")
+                    df = pd.read_excel(kriterien_path).fillna(0)
+                    kriterien_spalten = [col for col in df.columns if col.startswith("K")]
+                    prediction = rf_model.predict(df[kriterien_spalten])[0]
+                    sterne = int(prediction)
+                    st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
 
                     st.dataframe(df)
 
-                    # Download anbieten
                     df["Anzahl Sterne"] = sterne
                     output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
                     df.to_excel(output_path, index=False)
 
                     with open(output_path, "rb") as f:
                         st.download_button(
-                            label="Ergebnis herunterladen",
+                            "Ergebnis als Excel herunterladen",
                             data=f,
                             file_name=f"Bewertung_{zip_file.name}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-
                 else:
+                    st.error("Bewertungsmatrix wurde nicht erstellt.")
                     st.error("Es wurde keine Bewertungsdatei erstellt.")
 
