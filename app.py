@@ -92,9 +92,9 @@ MODEL_PATH = "final_RF_model.pkl"
 
 try:
     rf_model = joblib.load(MODEL_PATH)
-    st.success("✅ Bewertungsmodell erfolgreich geladen.")
+    st.success("Bewertungsmodell erfolgreich geladen.")
 except Exception as e:
-    st.error(f"❌ Bewertungsmodell konnte nicht geladen werden: {e}")
+    st.error(f"Bewertungsmodell konnte nicht geladen werden: {e}")
     st.stop()
 
 if uploaded_files:
@@ -129,7 +129,7 @@ if uploaded_files:
                     cwd=tmpdir,
                     capture_output=True,
                     text=True
-                    )
+                )
 
                 if result.returncode != 0:
                     st.error("Fehler beim Ausführen von `shpVerknuepfung.py`!")
@@ -139,13 +139,9 @@ if uploaded_files:
                     st.success("shpVerknuepfung.py erfolgreich ausgeführt!")
 
                 # --- Ergebnisse einlesen & Modell anwenden
-                    kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
-                    if os.path.exists(kriterien_path):
-                        df = pd.read_excel(kriterien_path).fillna(0)
-                    kriterien_spalten = [col for col in df.columns if col.startswith("K")]
-                    prediction = rf_model.predict(df[kriterien_spalten])[0]
-                    sterne = int(prediction)
-                    st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
+                kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
+                if os.path.exists(kriterien_path):
+                    df = pd.read_excel(kriterien_path).fillna(0)
 
                     # Mapping: Kürzel zu Beschreibung
                     KRITERIEN_BESCHREIBUNGEN = {
@@ -163,22 +159,19 @@ if uploaded_files:
                         "K013": "Erhalt Baumbestand",
                         "K015": "Freiflächen Zonierung"
                     }
-                    
-                    # Nur Spalten mit K002 bis K015
+
                     kriterien_spalten = [col for col in df.columns if col.startswith("K")]
-                    
-                    # In langes Format umwandeln
+                    prediction = rf_model.predict(df[kriterien_spalten])[0]
+                    sterne = int(prediction)
+                    st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
+
+                    # Umwandeln & anzeigen
                     df_long = df[kriterien_spalten].transpose().reset_index()
                     df_long.columns = ["Kriterium", "Bewertung"]
-                    
-                    # Kürzel ersetzen durch Beschreibung
                     df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
-                    
-                    # Schön anzeigen
                     st.dataframe(df_long)
 
-                    st.dataframe(df)
-
+                    # Download
                     df["Anzahl Sterne"] = sterne
                     output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
                     df.to_excel(output_path, index=False)
@@ -192,5 +185,4 @@ if uploaded_files:
                         )
                 else:
                     st.error("Bewertungsmatrix wurde nicht erstellt.")
-                    st.error("Es wurde keine Bewertungsdatei erstellt.")
 
