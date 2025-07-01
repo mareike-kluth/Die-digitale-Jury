@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import numpy as np
 import sys
+import glob
 
 # Projektpfad
 projektpfad = sys.argv[1] if len(sys.argv) > 1 else "."
@@ -27,13 +28,20 @@ layer_namen = [
 ]
 
 layers = {}
+
 for name in layer_namen:
-    path = os.path.join(projektpfad, name + ".shp")
-    try:
-        layers[name] = gpd.read_file(path)
-    except Exception:
+    matches = glob.glob(os.path.join(projektpfad, "**", name + ".shp"), recursive=True)
+    if matches:
+        path = matches[0]
+        try:
+            layers[name] = gpd.read_file(path)
+            print(f"✅ Gefunden: {path}")
+        except Exception:
+            layers[name] = None
+            print(f"⚠️ Fehler beim Laden: {path}")
+    else:
         layers[name] = None
-        print(f"Layer '{name}.shp' ist nicht vorhanden.")
+        print(f"❌ Layer '{name}.shp' nicht gefunden.")
 
 # Kriterien berechnen
 k = {}   # Dictionary für alle K-Werte
