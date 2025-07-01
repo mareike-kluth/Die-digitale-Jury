@@ -29,7 +29,7 @@ Die Kriterien werden automatisch berechnet und anschließend mit einem trainiert
 # -------------------------------------------
 # Random-Forest-Modell laden
 # -------------------------------------------
-MODEL_PATH = "final_rf_model.pkl"
+MODEL_PATH = "final_RF_model.pkl"
 
 try:
     rf_model = joblib.load(MODEL_PATH)
