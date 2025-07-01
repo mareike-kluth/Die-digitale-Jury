@@ -1,8 +1,1 @@
-[server]
-headless = true
 
-[theme]
-base = "light"
-
-[python]
-version = "3.11"
