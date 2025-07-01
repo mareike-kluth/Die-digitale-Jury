@@ -82,13 +82,20 @@ Nach der automatischen Bewertung kannst du:
 """)
 
 
-# Random-Forest-Modell laden
-
 uploaded_files = st.file_uploader(
     "Entwürfe als ZIP hochladen",
     type="zip",
     accept_multiple_files=True
 )
+
+MODEL_PATH = "final_RF_model.pkl"
+
+try:
+    rf_model = joblib.load(MODEL_PATH)
+    st.success("✅ Bewertungsmodell erfolgreich geladen.")
+except Exception as e:
+    st.error(f"❌ Bewertungsmodell konnte nicht geladen werden: {e}")
+    st.stop()
 
 if uploaded_files:
     for zip_file in uploaded_files:
