@@ -147,6 +147,36 @@ if uploaded_files:
                     sterne = int(prediction)
                     st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
 
+                    # Mapping: Kürzel zu Beschreibung
+                    KRITERIEN_BESCHREIBUNGEN = {
+                        "K002": "Zukunftsfähige Mobilität",
+                        "K003": "Anteil Freiflächen",
+                        "K004": "Einbettung in die Umgebung",
+                        "K005": "Lärmschutz",
+                        "K006": "Erhalt Bestandgebäude",
+                        "K007": "Energetische Standards (PV-Anlagen auf dem Dach)",
+                        "K008": "Vielfältige Nutzungen der Freiflächen",
+                        "K009": "Zugang Wasser",
+                        "K010": "Entsiegelung",
+                        "K011": "Rettungswege, Mindestwegbreite",
+                        "K012": "Anteil Dachbegrünung",
+                        "K013": "Erhalt Baumbestand",
+                        "K015": "Freiflächen Zonierung"
+                    }
+                    
+                    # Nur Spalten mit K002 bis K015
+                    kriterien_spalten = [col for col in df.columns if col.startswith("K")]
+                    
+                    # In langes Format umwandeln
+                    df_long = df[kriterien_spalten].transpose().reset_index()
+                    df_long.columns = ["Kriterium", "Bewertung"]
+                    
+                    # Kürzel ersetzen durch Beschreibung
+                    df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
+                    
+                    # Schön anzeigen
+                    st.dataframe(df_long)
+
                     st.dataframe(df)
 
                     df["Anzahl Sterne"] = sterne
