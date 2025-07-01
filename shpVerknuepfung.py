@@ -30,18 +30,15 @@ layer_namen = [
 layers = {}
 
 for name in layer_namen:
+    # Durchsuche rekursiv ALLE Unterordner
     matches = glob.glob(os.path.join(projektpfad, "**", name + ".shp"), recursive=True)
     if matches:
         path = matches[0]
-        try:
-            layers[name] = gpd.read_file(path)
-            print(f"✅ Gefunden: {path}")
-        except Exception:
-            layers[name] = None
-            print(f"⚠️ Fehler beim Laden: {path}")
+        print(f"✅ Gefunden: {path}")
+        layers[name] = gpd.read_file(path)
     else:
-        layers[name] = None
         print(f"❌ Layer '{name}.shp' nicht gefunden.")
+        layers[name] = None
 
 # Kriterien berechnen
 k = {}   # Dictionary für alle K-Werte
