@@ -80,22 +80,6 @@ Nach der automatischen Bewertung kannst du:
 
 # Random-Forest-Modell laden
 
-# -----------------------------
-# Random-Forest-Modell laden
-# -----------------------------
-MODEL_PATH = "final_RF_model.pkl"
-rf_model = None  # Modell-Variable immer initialisieren
-
-try:
-    rf_model = joblib.load(MODEL_PATH)
-    st.success("Bewertungsmodell erfolgreich geladen.")
-except Exception as e:
-    st.warning(f"Bewertungsmodell konnte nicht geladen werden: {e}")
-    st.info("Du kannst trotzdem ZIP-Dateien hochladen – die Bewertung funktioniert erst, wenn das Modell verfügbar ist.")
-
-# -----------------------------
-# ZIP Upload – erscheint immer!
-# -----------------------------
 uploaded_files = st.file_uploader(
     "Entwürfe als ZIP hochladen",
     type="zip",
@@ -103,72 +87,63 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    for zip_file in uploaded_files:
-        st.markdown(f"---\n### Bewertung für: `{zip_file.name}`")
-        st.success("ZIP-Datei erfolgreich hochgeladen.")
+    # Modell erst jetzt laden:
+    MODEL_PATH = "final_RF_model.pkl"
 
-        with st.spinner("Entpacke & verarbeite Entwurf..."):
+    try:
+        rf_model = joblib.load(MODEL_PATH)
+        st.success("✅ Bewertungsmodell erfolgreich geladen.")
+    except Exception as e:
+        st.error(f"❌ Bewertungsmodell konnte nicht geladen werden: {e}")
+        st.stop()
+
+    for zip_file in uploaded_files:
+        st.write(f" **Hochgeladen:** `{zip_file.name}`")
+
+        with st.spinner("Entpacke und verarbeite ZIP …"):
             with tempfile.TemporaryDirectory() as tmpdir:
-                # Entpacken
+                # ZIP entpacken
                 with zipfile.ZipFile(zip_file, "r") as zip_ref:
                     zip_ref.extractall(tmpdir)
 
-                # Dummy: Shapefiles prüfen
-                def lade_layer(name):
-                    path = os.path.join(tmpdir, name)
-                    return os.path.exists(path)
-
-                # Nur Layer-Existenz prüfen, hier kein Geopandas-Laden nötig:
-                layernamen = [
-                    "Gebaeude.shp", "Gebaeude_Umgebung.shp", "Verkehrsflaechen.shp",
-                    "Verkehrsmittellinie.shp", "Dachgruen.shp", "PV_Anlage.shp",
-                    "oeffentliche_Gruenflaechen.shp", "private_Gruenflaechen.shp",
-                    "Wasser.shp", "Baeume_Entwurf.shp", "Bestandsbaeume.shp",
-                    "Bestandsgruen.shp", "Gebietsabgrenzung.shp"
-                ]
-                fehlend = [name for name in layernamen if not lade_layer(name)]
-                if fehlend:
-                    st.warning(f"❗Fehlende Layer: {', '.join(fehlend)}")
-
-                # Kopiere Skripte falls nötig
-                shutil.copy("shpVerknuepfung.py", tmpdir)
-                shutil.copy("Bewertungsmatrix.xlsx", tmpdir)
-
+                # shpVerknuepfung.py ausführen
                 try:
-                    subprocess.run(["python", "shpVerknuepfung.py", tmpdir], cwd=tmpdir, capture_output=True)
+                    subprocess.run(
+                        ["python", "shpVerknuepfung.py", tmpdir],
+                        cwd=tmpdir,
+                        check=True
+                    )
                 except Exception as e:
-                    st.error(f"Fehler beim Skript: {e}")
+                    st.error(f"Fehler beim Ausführen des Skripts: {e}")
                     continue
 
+                # Ergebnisse laden
                 kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
                 if os.path.exists(kriterien_path):
                     df = pd.read_excel(kriterien_path)
                     df = df.fillna(0)
 
                     kriterien = [col for col in df.columns if col.startswith("K")]
+                    vorhersage = rf_model.predict(df[kriterien])[0]
 
-                    if rf_model:
-                        vorhersage = rf_model.predict(df[kriterien])[0]
-                        sterne = int(vorhersage)
-                        st.success(f"⭐️ Bewertung: {sterne} Sterne")
-                    else:
-                        st.error("Kein Bewertungsmodell vorhanden – keine Sterne-Bewertung möglich.")
-                        sterne = None
+                    sterne = int(vorhersage)
+                    st.success(f"⭐️ Bewertung: {sterne} Sterne")
 
-                    # Optional: Kriterien anzeigen
                     st.dataframe(df)
 
                     # Download anbieten
-                    df["Anzahl Sterne"] = sterne if sterne else "-"
+                    df["Anzahl Sterne"] = sterne
                     output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
                     df.to_excel(output_path, index=False)
+
                     with open(output_path, "rb") as f:
                         st.download_button(
-                            label="Ergebnis als Excel herunterladen",
+                            label="Ergebnis herunterladen",
                             data=f,
                             file_name=f"Bewertung_{zip_file.name}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
+
                 else:
-                    st.error("Keine Bewertungsdatei erstellt.")
+                    st.error("Es wurde keine Bewertungsdatei erstellt.")
 
