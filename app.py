@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import pandas as pd
+import geopandas as gpd
 import joblib
 
 # Einstellungen & Metadaten
