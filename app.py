@@ -115,7 +115,6 @@ if uploaded_files:
 
                 # --- Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
-                shutil.copy("Bewertungsmatrix.xlsx", tmpdir)
 
                 result = subprocess.run(
                     ["python", "shpVerknuepfung.py", tmpdir],
