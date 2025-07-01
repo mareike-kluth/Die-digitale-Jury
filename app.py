@@ -94,8 +94,9 @@ if uploaded_files:
         rf_model = joblib.load(MODEL_PATH)
         st.success("✅ Bewertungsmodell erfolgreich geladen.")
     except Exception as e:
-        st.error(f"❌ Bewertungsmodell konnte nicht geladen werden: {e}")
-        st.stop()
+    import traceback
+    st.error(f"❌ Bewertungsmodell konnte nicht geladen werden: {e}")
+    st.code(traceback.format_exc())
 
     for zip_file in uploaded_files:
         st.write(f" **Hochgeladen:** `{zip_file.name}`")
