@@ -2,6 +2,7 @@ import streamlit as st
 import zipfile
 import tempfile
 import os
+import shutil
 import subprocess
 import pandas as pd
 import joblib
@@ -12,9 +13,7 @@ st.set_page_config(
     page_title="Die Digitale Jury",
     layout="centered"
 )
-
 st.title("Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
-
 st.markdown("""
 ## 
 Willkommen bei der **digitalen Jury**!  
@@ -93,54 +92,90 @@ except Exception as e:
 
 # ZIP Upload
 
-uploaded_files = st.file_uploader(
+uploaded_zips = st.file_uploader(
     "Entwürfe als ZIP hochladen",
     type="zip",
     accept_multiple_files=True
 )
 
-if uploaded_files:
-    for uploaded_file in uploaded_files:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            zip_path = os.path.join(tmpdir, "upload.zip")
-            with open(zip_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+if uploaded_zips:
+    for zip_file in uploaded_zips:
+        st.markdown(f"---\n### Bewertung für: `{zip_file.name}`")
+        st.success("ZIP erfolgreich hochgeladen.")
 
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall(tmpdir)
+        with st.spinner("Entpacke & verarbeite Entwurf..."):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # Entpacken
+                with zipfile.ZipFile(zip_file, "r") as zip_ref:
+                    zip_ref.extractall(tmpdir)
 
-            st.info(f"Dateien aus **{uploaded_file.name}** entpackt. Berechne Kriterien...")
+                # SHP-Layer laden
+                def lade_layer(name):
+                    path = os.path.join(tmpdir, name)
+                    return gpd.read_file(path) if os.path.exists(path) else None
 
-            subprocess.run(["python", "shpVerknuepfung.py", tmpdir], check=True)
+                shapefiles = {
+                    "Gebaeude": lade_layer("Gebaeude.shp"),
+                    "Gebaeude_Umgebung": lade_layer("Gebaeude_Umgebung.shp"),
+                    "Verkehrsflaechen": lade_layer("Verkehrsflaechen.shp"),
+                    "Verkehrsmittellinie": lade_layer("Verkehrsmittellinie.shp"),
+                    "Dachgruen": lade_layer("Dachgruen.shp"),
+                    "PV_Anlage": lade_layer("PV_Anlage.shp"),
+                    "oeffentliche_Gruenflaechen": lade_layer("oeffentliche_Gruenflaechen.shp"),
+                    "private_Gruenflaechen": lade_layer("private_Gruenflaechen.shp"),
+                    "Wasser": lade_layer("Wasser.shp"),
+                    "Baeume_Entwurf": lade_layer("Baeume_Entwurf.shp"),
+                    "Bestandsbaeume": lade_layer("Bestandsbaeume.shp"),
+                    "Bestandsgruen": lade_layer("Bestandsgruen.shp"),
+                    "Gebietsabgrenzung": lade_layer("Gebietsabgrenzung.shp")
+                }
 
-            kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
-            if not os.path.exists(kriterien_path):
-                st.error("Kriterien-Datei wurde nicht erstellt.")
-                st.stop()
+                fehlende = [name for name, layer in shapefiles.items() if layer is None]
+                if fehlende:
+                    st.warning(f"Fehlende Dateien: {', '.join(fehlende)}")
 
-            df = pd.read_excel(kriterien_path)
+                if any(layer is not None for layer in shapefiles.values()):
+                    # Kopiere Scripts
+                    shutil.copy("shpVerknuepfung.py", tmpdir)
+                    shutil.copy("Bewertungsmatrix.xlsx", tmpdir)
 
-            for k in ["K001", "K014"]:
-                if k in df.columns:
-                    df.drop(columns=[k], inplace=True)
+                    # Skript ausführen
+                    try:
+                        subprocess.run(["python", "shpVerknuepfung.py", tmpdir], cwd=tmpdir, capture_output=True)
+                    except Exception as e:
+                        st.error(f"Fehler beim Skript: {e}")
+                        continue
 
-            df = df.fillna(0)
+                    # Ergebnisse einlesen
+                    kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
+                    if os.path.exists(kriterien_path):
+                        df = pd.read_excel(kriterien_path)
+                        df = df.fillna(0)
 
-            kriterien_spalten = [col for col in df.columns if col.startswith("K")]
-            prediction = rf_model.predict(df[kriterien_spalten])[0]
+                        # Nur relevante Spalten
+                        kriterien = [col for col in df.columns if col.startswith("K")]
+                        vorhersage = rf_model.predict(df[kriterien])[0]
 
-            st.success(f"⭐️ Ergebnis für **{uploaded_file.name}**: **{int(prediction)} Sterne**")
+                        sterne = int(vorhersage)
+                        st.success(f"⭐️ Bewertung: {sterne} Sterne")
 
-            st.dataframe(df)
+                        df_anzeige = df[kriterien].transpose().reset_index()
+                        df_anzeige.columns = ["Kriterium", "Wert"]
+                        df_anzeige["Beschreibung"] = df_anzeige["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
+                        st.dataframe(df_anzeige)
 
-            df["Anzahl Sterne"] = int(prediction)
-            output_path = os.path.join(tmpdir, f"Bewertung_{uploaded_file.name}.xlsx")
-            df.to_excel(output_path, index=False)
-            with open(output_path, "rb") as f:
-                st.download_button(
-                    label=f"Ergebnis für **{uploaded_file.name}** herunterladen",
-                    data=f,
-                    file_name=f"Bewertung_{uploaded_file.name}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-
+                        # Ergebnis-Download
+                        df["Anzahl Sterne"] = sterne
+                        output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
+                        df.to_excel(output_path, index=False)
+                        with open(output_path, "rb") as f:
+                            st.download_button(
+                                label="Ergebnis herunterladen",
+                                data=f,
+                                file_name=f"Bewertung_{zip_file.name}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            )
+                    else:
+                        st.error("Keine Bewertungsdatei erstellt.")
+                else:
+                    st.warning("Keine gültigen SHP-Layer im ZIP enthalten.")
