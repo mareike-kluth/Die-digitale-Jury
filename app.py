@@ -37,23 +37,32 @@ Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis
 
 ---
 
-### **Benötigte Dateien**
+### **Benötigte Dateien und Datenstruktur**
 
-Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (soweit vorhanden):
+Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhanden):
 
-- `Gebaeude.shp`
-- `Gebaeude_Umgebung.shp`
-- `Verkehrsflaechen.shp`
-- `Verkehrsmittellinie.shp`
-- `Dachgruen.shp`
-- `PV_Anlage.shp`
-- `oeffentliche_Gruenflaechen.shp`
-- `private_Gruenflaechen.shp`
-- `Wasser.shp`
-- `Baeume_Entwurf.shp`
-- `Bestandsbaeume.shp`
-- `Bestandsgruen.shp`
-- `Gebietsabgrenzung.shp`
+**Wichtig:** In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
+Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Tabelle.  
+Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein wie unten angegeben.
+
+Wenn eine Spalte fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
+
+
+| Layer | Benötigte Spalten |
+|-----------------------------|------------------------------|
+| `Gebaeude.shp` | `Geb_Hoehe` |
+| `Gebaeude_Umgebung.shp` | – |
+| `Dachgruen.shp` | – | 
+| `PV_Anlage.shp` | – | 
+| `Verkehrsflaechen.shp` | `Nutzung` mit `Fuss_Rad`, `Auto_Fuss_Rad` und `Stellplatz`
+| `Verkehrsmittellinie.shp` | – |
+| `oeffentliche_Gruenflaechen.shp` | `Nutzung` | 
+| `private_Gruenflaechen.shp` | – |
+| `Wasser.shp` | – |
+| `Baeume_Entwurf.shp` | – | 
+| `Bestandsbaeume.shp` | – | 
+| `Bestandsgruen.shp` | – | 
+| `Gebietsabgrenzung.shp` | – | 
 
 ---
 
