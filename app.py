@@ -48,6 +48,7 @@ Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** s
 Wenn eine Spalte fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
 
 
+
 | Layer | Benötigte Spalten |
 |-----------------------------|------------------------------|
 | `Gebaeude.shp` | `Geb_Hoehe` |
