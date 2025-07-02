@@ -19,7 +19,7 @@ st.set_page_config(
 )
 st.title("Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
 st.markdown("""
-## 
+#
 Willkommen bei der **digitalen Jury**!  
 Dieses Tool bewertet städtebauliche Entwürfe **automatisch** anhand von **13 Kriterien** mit einem trainierten **Random-Forest-Modell**.
 
@@ -41,12 +41,14 @@ Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis
 
 Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhanden):
 
-**Wichtig:** In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
+**Wichtig:** 
+In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
 Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Tabelle.  
 Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein wie unten angegeben.
+Alle Dateien müssen im passenden **Koordinatensystem** vorliegen.
 
+Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
 Wenn eine Spalte fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
-
 
 
 | Layer | Benötigte Spalten |
@@ -67,14 +69,6 @@ Wenn eine Spalte fehlt oder falsch benannt ist, kann das entsprechende Kriterium
 
 ---
 
-### **Hinweise**
-
-- Fehlende Layer führen zu einer automatischen `0`-Bewertung für das jeweilige Kriterium.
-- Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
-- Halte dich strikt an die **Dateinamen**.
-- Alle Dateien müssen im richtigen **Koordinatensystem** liegen.
-
----
 
 ### **Hochladen**
 
@@ -188,29 +182,30 @@ if uploaded_files:
                         "K015": "Freiflächen Zonierung"
                     }
 
-                    kriterien_spalten = [col for col in df.columns if col.startswith("K")]
-                    prediction = rf_model.predict(df[kriterien_spalten])[0]
-                    sterne = int(prediction)
-                    st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
-
-                    # Umwandeln & anzeigen
-                    df_long = df[kriterien_spalten].transpose().reset_index()
-                    df_long.columns = ["Kriterium", "Bewertung"]
-                    df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
-                    st.dataframe(df_long)
-
-                    # Download
-                    df["Anzahl Sterne"] = sterne
-                    output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
-                    df.to_excel(output_path, index=False)
-
-                    with open(output_path, "rb") as f:
-                        st.download_button(
-                            "Ergebnis als Excel herunterladen",
-                            data=f,
-                            file_name=f"Bewertung_{zip_file.name}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                else:
-                    st.error("Bewertungsmatrix wurde nicht erstellt.")
-
+                        kriterien_spalten = [col for col in df.columns if col.startswith("K")]
+                        prediction = rf_model.predict(df[kriterien_spalten])[0]
+                        sterne = int(prediction)
+                        st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
+                    
+                        # Für Anzeige in der App
+                        df_long = df[kriterien_spalten].transpose().reset_index()
+                        df_long.columns = ["Kriterium", "Bewertung"]
+                        df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
+                        st.dataframe(df_long)
+                    
+                        # Für Excel-Download → Spalten umbenennen
+                        df_umbenannt = df.rename(columns=KRITERIEN_BESCHREIBUNGEN)
+                        df_umbenannt["Anzahl Sterne"] = sterne
+                    
+                        output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
+                        df_umbenannt.to_excel(output_path, index=False)
+                    
+                        with open(output_path, "rb") as f:
+                            st.download_button(
+                                "Ergebnis als Excel herunterladen",
+                                data=f,
+                                file_name=f"Bewertung_{zip_file.name}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            )
+                    else:
+                        st.error("Bewertungsmatrix wurde nicht erstellt.")
