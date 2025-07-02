@@ -121,8 +121,10 @@ if uploaded_files:
                     st.warning(f"Achtung: Folgende Layer fehlen: {', '.join(fehlen)}")
 
                
-                # --- Check Layer & Attribute in tmpdir ---
-                st.subheader(" Layer- & Attribut-Check")
+                import geopandas as gpd
+
+                # --- Layer- & Attribut-Check ---
+                st.markdown("#### Layer- & Attribut-Check")
                 
                 erwartete_attributs = {
                     "Verkehrsflaechen": ["Nutzung"],
@@ -133,16 +135,12 @@ if uploaded_files:
                 for layer_name, attrs in erwartete_attributs.items():
                     shp_path = os.path.join(tmpdir, f"{layer_name}.shp")
                     if os.path.exists(shp_path):
-                        st.write(f" {layer_name}.shp gefunden.")
                         layer = gpd.read_file(shp_path)
                         for attr in attrs:
                             if attr not in layer.columns:
-                                st.warning(f" `{attr}` fehlt in `{layer_name}`!")
-                            else:
-                                st.write(f" `{layer_name}` enthält `{attr}`.")
+                                st.warning(f" `{attr}` fehlt in `{layer_name}.shp`")
                     else:
-                        st.warning(f" {layer_name}.shp fehlt!")
-
+                        st.warning(f" `{layer_name}.shp` fehlt!")
                 
                 # --- Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
