@@ -107,18 +107,27 @@ except:
 
 
 # K005 - Laermschutz 
+# K005 - Laermschutz mit Debug
 try:
     g = get("Gebaeude")
     v = get("Verkehrsflaechen")
     if g is not None and v is not None and "Geb_Hoehe" in g.columns:
         g["Geb_Hoehe"] = pd.to_numeric(g["Geb_Hoehe"], errors="coerce")
-        miv = v[v["Nutzung"].isin(["Auto_Fuss_Rad"])]
+        print("Geb_Hoehe Beispiel:", g["Geb_Hoehe"].head())
+        v["Nutzung_clean"] = v["Nutzung"].str.lower().str.replace("_", "")
+        print("Nutzung unique:", v["Nutzung_clean"].unique())
+
+        miv = v[v["Nutzung_clean"].isin(["autofussrad"])]
+        print("MIV Flächen gefunden:", miv.shape)
+
         if not miv.empty:
             miv_puffer = miv.buffer(10)
-            g["an_miv"] = g.intersects(miv_puffer.geometry.union_all())
+            g["an_miv"] = g.intersects(miv_puffer.unary_union)
+            print("Gebäude an MIV:", g["an_miv"].sum())
 
             hoehe_miv = g[g["an_miv"]]["Geb_Hoehe"].mean()
             hoehe_sonstige = g[~g["an_miv"]]["Geb_Hoehe"].mean()
+            print("Höhe MIV:", hoehe_miv, "Höhe sonst:", hoehe_sonstige)
 
             if pd.notna(hoehe_miv) and pd.notna(hoehe_sonstige):
                 if hoehe_miv > hoehe_sonstige:
@@ -130,12 +139,14 @@ try:
             else:
                 k["K005"] = np.nan
         else:
+            print("KEINE MIV Flächen gefunden!")
             k["K005"] = np.nan
     else:
         raise ValueError
 except:
     k["K005"] = np.nan
     print("K005: Lärmschutzbewertung konnte nicht berechnet werden.")
+
 
 
 # K006 - Erhalt Bestandsgebaeude
