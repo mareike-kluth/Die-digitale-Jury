@@ -120,24 +120,28 @@ if uploaded_files:
                 if fehlen:
                     st.warning(f"Achtung: Folgende Layer fehlen: {', '.join(fehlen)}")
 
-                # --- Pflichtattribute prüfen
+               
+                # --- Check Layer & Attribute in tmpdir ---
+                st.subheader(" Layer- & Attribut-Check")
+                
                 erwartete_attributs = {
                     "Verkehrsflaechen": ["Nutzung"],
                     "Gebaeude": ["Geb_Hoehe"],
                     "oeffentliche_Gruenflaechen": ["Nutzung"]
                 }
                 
-                print("\n Attribute-Check:")
                 for layer_name, attrs in erwartete_attributs.items():
-                    layer = get(layer_name)
-                    if layer is None:
-                        print(f" Layer `{layer_name}` fehlt komplett!")
-                    else:
+                    shp_path = os.path.join(tmpdir, f"{layer_name}.shp")
+                    if os.path.exists(shp_path):
+                        st.write(f" {layer_name}.shp gefunden.")
+                        layer = gpd.read_file(shp_path)
                         for attr in attrs:
                             if attr not in layer.columns:
-                                print(f" Attribut `{attr}` fehlt in `{layer_name}`.")
+                                st.warning(f" `{attr}` fehlt in `{layer_name}`!")
                             else:
-                                print(f" `{layer_name}` enthält `{attr}`.")
+                                st.write(f" `{layer_name}` enthält `{attr}`.")
+                    else:
+                        st.warning(f" {layer_name}.shp fehlt!")
 
                 
                 # --- Skript ausführen
