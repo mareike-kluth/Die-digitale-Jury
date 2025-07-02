@@ -127,9 +127,7 @@ if uploaded_files:
                
                 import geopandas as gpd
 
-                # --- Layer- & Attribut-Check ---
-                st.markdown("#### Layer- & Attribut-Check")
-                
+                # --- Layer- & Attribut-Check ---                               
                 erwartete_attributs = {
                     "Verkehrsflaechen": ["Nutzung"],
                     "Gebaeude": ["Geb_Hoehe"],
