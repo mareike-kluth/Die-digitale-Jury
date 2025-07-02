@@ -92,7 +92,6 @@ MODEL_PATH = "final_RF_model.pkl"
 
 try:
     rf_model = joblib.load(MODEL_PATH)
-    st.success("Bewertungsmodell erfolgreich geladen.")
 except Exception as e:
     st.error(f"Bewertungsmodell konnte nicht geladen werden: {e}")
     st.stop()
@@ -133,21 +132,6 @@ if uploaded_files:
                     capture_output=True,
                     text=True
                 )
-                
-                # Debug: Zeige die Standard-Ausgabe
-                st.subheader("🔍 Debug-Ausgabe von shpVerknuepfung.py")
-                st.code(result.stdout)
-                
-                # Debug: Zeige die Fehler-Ausgabe (falls vorhanden)
-                if result.stderr:
-                    st.subheader("⚠️ Fehler-Ausgabe")
-                    st.code(result.stderr)
-                
-                if result.returncode != 0:
-                    st.error("Fehler beim Ausführen von `shpVerknuepfung.py`!")
-                    st.stop()
-                else:
-                    st.success("shpVerknuepfung.py erfolgreich ausgeführt!")
 
 
                 # --- Ergebnisse einlesen & Modell anwenden
