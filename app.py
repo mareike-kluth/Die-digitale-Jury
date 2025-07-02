@@ -120,6 +120,26 @@ if uploaded_files:
                 if fehlen:
                     st.warning(f"Achtung: Folgende Layer fehlen: {', '.join(fehlen)}")
 
+                # --- Pflichtattribute prüfen
+                erwartete_attributs = {
+                    "Verkehrsflaechen": ["Nutzung"],
+                    "Gebaeude": ["Geb_Hoehe"],
+                    "oeffentliche_Gruenflaechen": ["Nutzung"]
+                }
+                
+                print("\n Attribute-Check:")
+                for layer_name, attrs in erwartete_attributs.items():
+                    layer = get(layer_name)
+                    if layer is None:
+                        print(f" Layer `{layer_name}` fehlt komplett!")
+                    else:
+                        for attr in attrs:
+                            if attr not in layer.columns:
+                                print(f" Attribut `{attr}` fehlt in `{layer_name}`.")
+                            else:
+                                print(f" `{layer_name}` enthält `{attr}`.")
+
+                
                 # --- Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
 
