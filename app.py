@@ -182,30 +182,30 @@ if uploaded_files:
                         "K015": "Freiflächen Zonierung"
                     }
 
-                        kriterien_spalten = [col for col in df.columns if col.startswith("K")]
-                        prediction = rf_model.predict(df[kriterien_spalten])[0]
-                        sterne = int(prediction)
-                        st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
-                    
-                        # Für Anzeige in der App
-                        df_long = df[kriterien_spalten].transpose().reset_index()
-                        df_long.columns = ["Kriterium", "Bewertung"]
-                        df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
-                        st.dataframe(df_long)
-                    
-                        # Für Excel-Download → Spalten umbenennen
-                        df_umbenannt = df.rename(columns=KRITERIEN_BESCHREIBUNGEN)
-                        df_umbenannt["Anzahl Sterne"] = sterne
-                    
-                        output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
-                        df_umbenannt.to_excel(output_path, index=False)
-                    
-                        with open(output_path, "rb") as f:
-                            st.download_button(
-                                "Ergebnis als Excel herunterladen",
-                                data=f,
-                                file_name=f"Bewertung_{zip_file.name}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
-                    else:
-                        st.error("Bewertungsmatrix wurde nicht erstellt.")
+                    kriterien_spalten = [col for col in df.columns if col.startswith("K")]
+                    prediction = rf_model.predict(df[kriterien_spalten])[0]
+                    sterne = int(prediction)
+                    st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
+                
+                    # Für Anzeige in der App
+                    df_long = df[kriterien_spalten].transpose().reset_index()
+                    df_long.columns = ["Kriterium", "Bewertung"]
+                    df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
+                    st.dataframe(df_long)
+                
+                    # Für Excel-Download → Spalten umbenennen
+                    df_umbenannt = df.rename(columns=KRITERIEN_BESCHREIBUNGEN)
+                    df_umbenannt["Anzahl Sterne"] = sterne
+                
+                    output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
+                    df_umbenannt.to_excel(output_path, index=False)
+                
+                    with open(output_path, "rb") as f:
+                        st.download_button(
+                            "Ergebnis als Excel herunterladen",
+                            data=f,
+                            file_name=f"Bewertung_{zip_file.name}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                else:
+                    st.error("Bewertungsmatrix wurde nicht erstellt.")
