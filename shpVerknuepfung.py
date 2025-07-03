@@ -199,26 +199,26 @@ except:
     print("K008: Vielfältige Freiflächen konnten nicht berechnet werden.")
 
 
-# K009 - Zugang zum Wasser
-# Skala: 0 = kein Wasser, 1 = funktional, 2 = erlebbar
+# K009 - Zugang zum Wasser 
 try:
     wasser = get("Wasser")
     oeff = get("oeffentliche_Gruenflaechen")
-    if wasser is not None and oeff is not None:
-        buffer = oeff.copy()
-        buffer["geometry"] = buffer.geometry.buffer(2)
-        wasser["an_oeff"] = wasser.intersects(buffer.geometry.union_all())
+    if wasser is not None and not wasser.empty and oeff is not None and not oeff.empty:
+        oeff_union = oeff.unary_union.buffer(2)  # Puffer nur einmal, Union ist stabil
+        wasser["an_oeff"] = wasser.intersects(oeff_union)
+
         if wasser["an_oeff"].any():
-            k["K009"] = 2
+            k["K009"] = 2  # Erlebbar
         else:
-            k["K009"] = 1
-    elif wasser is not None:
+            k["K009"] = 1  # Funktional
+    elif wasser is not None and not wasser.empty:
         k["K009"] = 1
     else:
         k["K009"] = 0
-except:
+except Exception as e:
     k["K009"] = np.nan
-    print("K009: Zugang zum Wasser konnte nicht bewertet werden.")
+    print("K009: Zugang zum Wasser konnte nicht bewertet werden:", e)
+
 
 
 # K010 - Entsiegelung
