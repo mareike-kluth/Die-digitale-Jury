@@ -19,7 +19,7 @@ st.set_page_config(
 )
 st.title("Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
 st.markdown("""
-#######
+######
 Willkommen bei der **digitalen Jury**!  
 Dieses Tool bewertet städtebauliche Entwürfe **automatisch** anhand von **13 Kriterien** mit einem trainierten **Random-Forest-Modell**.
 
