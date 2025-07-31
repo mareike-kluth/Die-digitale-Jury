@@ -56,7 +56,7 @@ else:
 try:
     verkehr = get("Verkehrsflaechen")
     fuss_rad = verkehr[verkehr["Nutzung"] == "Fuss_Rad"].geometry.area.sum()
-    miv = verkehr[verkehr["Nutzung"].isin(["Auto_Fuss_Rad", "Stellplatz", "halbgruener_Stellplatz"])]
+    miv = verkehr[verkehr["Nutzung"].isin(["Auto_Fuss_Rad", "Stellplatz"])]
     miv_flaeche = miv.geometry.area.sum()
     ratio = fuss_rad / miv_flaeche if miv_flaeche > 0 else 0
     if miv_flaeche == 0 and fuss_rad > 0:
