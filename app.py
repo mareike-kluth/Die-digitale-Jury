@@ -146,9 +146,6 @@ if uploaded_files:
                 
                 # --- Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
-
-                # --- Skript ausführen
-                shutil.copy("shpVerknuepfung.py", tmpdir)
                 
                 result = subprocess.run(
                     [sys.executable, "shpVerknuepfung.py", tmpdir],
@@ -207,3 +204,4 @@ if uploaded_files:
                         )
                 else:
                     st.error("Bewertungsmatrix wurde nicht erstellt.")
+
