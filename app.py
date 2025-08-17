@@ -44,7 +44,7 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhan
 **Wichtig:** 
 In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
 Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Tabelle.  
-Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein wie unten angegeben.
+Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein wie unten angegeben. Beachte auch die Groß- und Kleinschreibung. 
 Alle Dateien müssen im passenden **Koordinatensystem** vorliegen.
 
 Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
@@ -61,6 +61,7 @@ Wenn eine Spalte fehlt oder falsch benannt ist, kann das entsprechende Kriterium
 | `Verkehrsmittellinie.shp` | – |
 | `oeffentliche_Gruenflaechen.shp` | `Nutzung` | 
 | `private_Gruenflaechen.shp` | – |
+| `oeffentliche_Plaetze` | – |
 | `Wasser.shp` | – |
 | `Baeume_Entwurf.shp` | – | 
 | `Bestandsbaeume.shp` | – | 
@@ -204,4 +205,5 @@ if uploaded_files:
                         )
                 else:
                     st.error("Bewertungsmatrix wurde nicht erstellt.")
+
 
