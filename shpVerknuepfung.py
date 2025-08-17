@@ -74,7 +74,7 @@ except:
     print("K002: Mobilitätsbewertung konnte nicht durchgeführt werden.")
 
 
-# K003 - Anteil der Freiflaechen
+# K003 - Anteil der Gruenflaechen
 try:
     gruenflaeche = sum([
         get("oeffentliche_Gruenflaechen").geometry.area.sum() if get("oeffentliche_Gruenflaechen") is not None else 0,
@@ -84,7 +84,7 @@ try:
     k["K003"] = round(gruenflaeche / gebietsflaeche, 2) if gebietsflaeche > 0 else np.nan
 except:
     k["K003"] = np.nan
-    print("K003: Anteil der Freiflächen konnte nicht berechnet werden.")
+    print("K003: Anteil der Grünflächen konnte nicht berechnet werden.")
 
 
 # K004 - Einbettung in die Umgebung
@@ -302,5 +302,6 @@ except:
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
 print("Kriterienbewertung", k)
+
 
 
