@@ -57,7 +57,7 @@ Wenn eine Spalte fehlt oder falsch benannt ist, kann das entsprechende Kriterium
 | `Gebaeude_Umgebung.shp` | – |
 | `Dachgruen.shp` | – | 
 | `PV_Anlage.shp` | – | 
-| `Verkehrsflaechen.shp` | `Nutzung` mit `Fuss_Rad`, `Auto_Fuss_Rad` und `Stellplatz`
+| `Verkehrsflaechen.shp` | `Nutzung` mit `Fuss_Rad` und `Auto_Fuss_Rad` 
 | `Verkehrsmittellinie.shp` | – |
 | `oeffentliche_Gruenflaechen.shp` | `Nutzung` | 
 | `private_Gruenflaechen.shp` | – |
@@ -205,5 +205,6 @@ if uploaded_files:
                         )
                 else:
                     st.error("Bewertungsmatrix wurde nicht erstellt.")
+
 
 
