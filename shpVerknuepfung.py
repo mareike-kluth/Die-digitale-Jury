@@ -108,7 +108,6 @@ except:
 
 
 # K005 - Laermschutz 
-# K005 - Laermschutz mit Debug
 try:
     g = get("Gebaeude")
     v = get("Verkehrsflaechen")
@@ -146,7 +145,7 @@ try:
         raise ValueError
 except:
     k["K005"] = np.nan
-    print("K005: Lärmschutzbewertung konnte nicht berechnet werden.")
+    print("K005: Lärmschutz konnte nicht berechnet werden.")
 
 
 
@@ -303,6 +302,7 @@ except:
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
 print("Kriterienbewertung", k)
+
 
 
 
