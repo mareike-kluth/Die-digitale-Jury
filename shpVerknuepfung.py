@@ -19,6 +19,7 @@ layer_namen = [
     "Verkehrsflaechen",
     "Verkehrsmittellinie",
     "oeffentliche_Gruenflaechen",
+    "oeffentliche_Plaetze",
     "private_Gruenflaechen",
     "Wasser",
     "Baeume_Entwurf",
@@ -34,10 +35,10 @@ for name in layer_namen:
     matches = glob.glob(os.path.join(projektpfad, "**", name + ".shp"), recursive=True)
     if matches:
         path = matches[0]
-        print(f"✅ Gefunden: {path}")
+        print(f" Gefunden: {path}")
         layers[name] = gpd.read_file(path)
     else:
-        print(f"❌ Layer '{name}.shp' nicht gefunden.")
+        print(f" Layer '{name}.shp' nicht gefunden.")
         layers[name] = None
 
 # Kriterien berechnen
@@ -186,7 +187,7 @@ except:
     k["K007"] = np.nan
     print("K007: Anteil PV-Anlagen konnte nicht berechnet werden.")
 
-# K008 - vielfaeltige Freiflaechen
+# K008 - Nutzungsvielfalt Freiflaechen
 try:
     oeff = get("oeffentliche_Gruenflaechen")
     if oeff is not None and "Nutzung" in oeff.columns:
@@ -196,7 +197,7 @@ try:
         raise ValueError
 except:
     k["K008"] = np.nan
-    print("K008: Vielfältige Freiflächen konnten nicht berechnet werden.")
+    print("K008: Nutzungsvielfalt Freiflächen konnten nicht berechnet werden.")
 
 
 # K009 - Zugang zum Wasser 
@@ -302,6 +303,7 @@ except:
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
 print("Kriterienbewertung", k)
+
 
 
 
