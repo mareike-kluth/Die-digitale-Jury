@@ -56,23 +56,38 @@ else:
 # Fläche für nachhaltige Mobilität: Nur "Fuss_Rad"
 try:
     verkehr = get("Verkehrsflaechen")
-    fuss_rad = verkehr[verkehr["Nutzung"] == "Fuss_Rad"].geometry.area.sum()
-    miv = verkehr[verkehr["Nutzung"].isin(["Auto_Fuss_Rad", "Stellplatz"])]
-    miv_flaeche = miv.geometry.area.sum()
-    ratio = fuss_rad / miv_flaeche if miv_flaeche > 0 else 0
-    if miv_flaeche == 0 and fuss_rad > 0:
+    if verkehr is None or verkehr.empty or "Nutzung" not in verkehr.columns:
+        raise ValueError("Verkehrsflaechen fehlt oder hat kein Feld 'Nutzung'.")
+
+    # Flächen nach Kategorien
+    fuss_rad   = verkehr[verkehr["Nutzung"] == "Fuss_Rad"].geometry.area.sum()
+    kfz        = verkehr[verkehr["Nutzung"] == "Kfz_Flaeche"].geometry.area.sum()
+    begegnung  = verkehr[verkehr["Nutzung"] == "Begegnungszone"].geometry.area.sum()
+
+    # Auto-lastige Fläche = Auto + 0.5 * Begegnungszone
+    auto_flaeche = kfz + 0.5 * begegnung
+
+    # Verhältnis berechnen
+    if auto_flaeche == 0 and fuss_rad > 0:
+        # Komplett autofrei → Bestnote
         k["K002"] = 5
-    elif ratio > 2:
-        k["K002"] = 4
-    elif ratio > 1:
-        k["K002"] = 3
-    elif ratio > 0.5:
-        k["K002"] = 2
     else:
-        k["K002"] = 1
-except:
+        ratio = fuss_rad / auto_flaeche if auto_flaeche > 0 else 0
+
+        if ratio > 2:
+            k["K002"] = 4
+        elif ratio > 1:
+            k["K002"] = 3
+        elif ratio > 0.5:
+            k["K002"] = 2
+        else:
+            k["K002"] = 1
+
+    print(f"K002 Debug – Fuss_Rad: {fuss_rad:.2f}, Kfz: {kfz:.2f}, Begegnungszone: {begegnung:.2f}, Auto-Fläche: {auto_flaeche:.2f}, Ergebnis: {k['K002']}")
+
+except Exception as e:
     k["K002"] = np.nan
-    print("K002: Mobilitätsbewertung konnte nicht durchgeführt werden.")
+    print("K002: Mobilitätsbewertung konnte nicht durchgeführt werden:", e)
 
 
 # K003 - Anteil der Gruenflaechen
@@ -302,6 +317,7 @@ except:
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
 print("Kriterienbewertung", k)
+
 
 
 
