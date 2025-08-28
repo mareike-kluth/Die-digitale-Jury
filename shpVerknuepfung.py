@@ -43,13 +43,14 @@ k = {}   # Dictionary für alle K-Werte
 
 get = lambda name: layers.get(name, None)
 
-# Gebietsflaeche nur berechnen, wenn Layer vorhanden
+# Gebietsflaeche berechnen (wenn Layer vorhanden)
 if get("Gebietsabgrenzung") is not None:
     gebietsflaeche = get("Gebietsabgrenzung").geometry.area.sum()
 else:
     gebietsflaeche = np.nan
 
-# K002 - zukunftsfaehige Mobilitaet 
+
+# Kriterium: Zukunftsfaehige Mobilitaet 
 try:
     verkehr = get("Verkehrsflaechen")
     if verkehr is None or verkehr.empty or "Nutzung" not in verkehr.columns:
@@ -313,6 +314,7 @@ except:
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
 print("Kriterienbewertung", k)
+
 
 
 
