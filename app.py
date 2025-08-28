@@ -28,7 +28,7 @@ Dieses Tool bewertet städtebauliche Entwürfe **automatisch** anhand von **13 K
 ### **So funktioniert es**
 
 **Entwurf vorbereiten:**  
-Speichere deine Geodaten im **Shapefile-Format** (`.shp`) mit den **exakten Dateinamen** (siehe unten).  
+Speichere deine Geodaten der Entwürfe im **Shapefile-Format** (`.shp`) mit den **exakten Dateinamen** (siehe Tabelle unten).  
 Jedes `.shp` benötigt seine zugehörigen Begleitdateien (`.shx`, `.dbf`, `.prj`).  
 Diese müssen **alle zusammen** in **einer ZIP-Datei** gepackt werden.
 
@@ -39,17 +39,16 @@ Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis
 
 ### **Benötigte Dateien und Datenstruktur**
 
-Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhanden):
-
 **Wichtig:** 
 In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
 Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Tabelle.  
-Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein wie unten angegeben. Beachte auch die Groß- und Kleinschreibung. 
+Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein, wie unten angegeben. Beachte auch die Groß- und Kleinschreibung. 
 Alle Dateien müssen im passenden **Koordinatensystem** vorliegen.
 
 Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
-Wenn eine Spalte fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
+Wenn ein Layer oder Attribut fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
 
+Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhanden):
 
 | Layer | Benötigte Spalten |
 |-----------------------------|------------------------------|
@@ -106,11 +105,11 @@ if uploaded_files:
         st.write(f"Hochgeladen: `{zip_file.name}`")
         with st.spinner("Verarbeite Entwurf ..."):
             with tempfile.TemporaryDirectory() as tmpdir:
-                # --- Entpacken
+                # Entpacken
                 with zipfile.ZipFile(zip_file, "r") as zip_ref:
                     zip_ref.extractall(tmpdir)
 
-                # --- Erwartete Layer prüfen
+                # Erwartete Layer prüfen
                 erwartete_layer = [
                     "Gebaeude.shp", "Gebaeude_Umgebung.shp", "Verkehrsflaechen.shp", "Verkehrsmittellinie.shp",
                     "Dachgruen.shp", "PV_Anlage.shp", "oeffentliche_Gruenflaechen.shp", "private_Gruenflaechen.shp",
@@ -128,7 +127,7 @@ if uploaded_files:
                
                 import geopandas as gpd
 
-                # --- Layer- & Attribut-Check ---                               
+                # Layer- & Attribut-Check                               
                 erwartete_attributs = {
                     "Verkehrsflaechen": ["Nutzung"],
                     "Gebaeude": ["Geb_Hoehe"],
@@ -145,7 +144,7 @@ if uploaded_files:
                     else:
                         st.warning(f" `{layer_name}.shp` fehlt!")
                 
-                # --- Skript ausführen
+                # Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
                 
                 result = subprocess.run(
@@ -156,7 +155,7 @@ if uploaded_files:
                 )
 
 
-                # --- Ergebnisse einlesen & Modell anwenden
+                # Ergebnisse einlesen & Modell anwenden
                 kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
                 if os.path.exists(kriterien_path):
                     df = pd.read_excel(kriterien_path).fillna(0)
@@ -205,6 +204,7 @@ if uploaded_files:
                         )
                 else:
                     st.error("Bewertungsmatrix wurde nicht erstellt.")
+
 
 
 
