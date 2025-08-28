@@ -1,5 +1,4 @@
-
-# SHP verarbeiten - 13 Kriterien
+# Bemessung der 13 Bewertungskriterien
 import geopandas as gpd
 import pandas as pd
 import os
@@ -7,10 +6,8 @@ import numpy as np
 import sys
 import glob
 
-# Projektpfad
 projektpfad = sys.argv[1] if len(sys.argv) > 1 else "."
 
-# Hilfsfunktion zum sicheren Laden
 layer_namen = [
     "Gebaeude",
     "Gebaeude_Umgebung",
@@ -43,7 +40,7 @@ for name in layer_namen:
 
 # Kriterien berechnen
 k = {}   # Dictionary für alle K-Werte
-# Hilfsfunktion zur sicheren Abfrage eines Layers
+
 get = lambda name: layers.get(name, None)
 
 # Gebietsflaeche nur berechnen, wenn Layer vorhanden
@@ -52,8 +49,7 @@ if get("Gebietsabgrenzung") is not None:
 else:
     gebietsflaeche = np.nan
 
-# K002 - zukunftsfaehige Mobilitaet
-# Fläche für nachhaltige Mobilität: Nur "Fuss_Rad"
+# K002 - zukunftsfaehige Mobilitaet 
 try:
     verkehr = get("Verkehrsflaechen")
     if verkehr is None or verkehr.empty or "Nutzung" not in verkehr.columns:
@@ -163,9 +159,7 @@ except:
     print("K005: Lärmschutz konnte nicht berechnet werden.")
 
 
-
 # K006 - Erhalt Bestandsgebaeude
-# Anteil neuer Gebäude, die auf Bestand stehen
 try:
     gebaeude = get("Gebaeude")
     gebaeude_bestand = get("Gebaeude_Umgebung")
@@ -186,6 +180,7 @@ except:
     k["K006"] = np.nan
     print("K006: Erhalt Bestandsgebäude konnte nicht berechnet werden.")
 
+
 # K007 - energetische Standards: Anteil PV-Anlagen
 # Verhältnis PV-Fläche zu gesamter Gebäudefläche (als Dachfläche angenommen)
 try:
@@ -200,6 +195,7 @@ try:
 except:
     k["K007"] = np.nan
     print("K007: Anteil PV-Anlagen konnte nicht berechnet werden.")
+
 
 # K008 - Nutzungsvielfalt Freiflaechen
 try:
@@ -233,7 +229,6 @@ try:
 except Exception as e:
     k["K009"] = np.nan
     print("K009: Zugang zum Wasser konnte nicht bewertet werden:", e)
-
 
 
 # K010 - Entsiegelung
@@ -289,6 +284,7 @@ except:
     k["K012"] = np.nan
     print("K012: Dachbegrünung konnte nicht berechnet werden.")
 
+
 # K013 - Erhalt Baumbestand
 try:
     neu = get("Baeume_Entwurf")
@@ -317,6 +313,7 @@ except:
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
 print("Kriterienbewertung", k)
+
 
 
 
