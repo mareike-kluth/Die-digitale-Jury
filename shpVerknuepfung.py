@@ -124,39 +124,33 @@ try:
         v = v.copy()
         g["Geb_Hoehe"] = pd.to_numeric(g["Geb_Hoehe"], errors="coerce")
 
-        # Nutzung vereinheitlichen (für robuste Abfragen)
-        v["Nutzung_clean"] = (
-            v["Nutzung"].astype(str).str.strip().str.lower().str.replace("_", "", regex=False)
-        )
+        # Nutzung normalisieren und nur Kfz-Flächen wählen
+        v["Nutzung_clean"] = v["Nutzung"].astype(str).str.lower().str.replace("_", "", regex=False)
+        kfz = v[v["Nutzung_clean"] == "kfzflaeche"]
 
-        # MIV-Flächen: Kfz_Flaeche ∪ Begegnungszone
-        miv_mask = (
-            v["Nutzung"].isin(["Kfz_Flaeche", "Begegnungszone"]) |
-            v["Nutzung_clean"].isin(["kfzflaeche", "begegnungszone"])
-        )
-        miv = v.loc[miv_mask]
+        if not kfz.empty:
+            # 10-m-Puffer um Kfz-Flächen, Gebäude in Nähe markieren
+            kfz_puffer_union = kfz.buffer(10).unary_union
+            g["an_kfz"] = g.intersects(kfz_puffer_union)
 
-        if not miv.empty:
-            # 10-m-Puffer um MIV-Flächen und Gebäude in der Nähe markieren
-            miv_union = miv.buffer(10).unary_union
-            g["an_miv"] = g.intersects(miv_union)
+            # Höhenvergleich (nahe Kfz vs. übrige)
+            hoehe_nahe = g.loc[g["an_kfz"], "Geb_Hoehe"].mean()
+            hoehe_fern = g.loc[~g["an_kfz"], "Geb_Hoehe"].mean()
 
-            # Höhenvergleich (nur mit validen Höhen)
-            hoehe_miv = g.loc[g["an_miv"], "Geb_Hoehe"].mean()
-            hoehe_sonstige = g.loc[~g["an_miv"], "Geb_Hoehe"].mean()
-
-            if pd.notna(hoehe_miv) and pd.notna(hoehe_sonstige):
-                if hoehe_miv > hoehe_sonstige:
+            if pd.notna(hoehe_nahe) and pd.notna(hoehe_fern):
+                if hoehe_nahe > hoehe_fern:
                     k["K005"] = 2
-                elif hoehe_miv == hoehe_sonstige:
+                elif hoehe_nahe == hoehe_fern:
                     k["K005"] = 1
                 else:
                     k["K005"] = 0
             else:
                 k["K005"] = np.nan
         else:
+            # Keine Kfz-Flächen identifiziert
             k["K005"] = np.nan
     else:
+        # Fehlende Daten/Spalten
         raise ValueError
 except Exception:
     k["K005"] = np.nan
@@ -334,6 +328,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
