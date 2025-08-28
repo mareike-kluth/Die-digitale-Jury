@@ -113,29 +113,37 @@ except:
     k["K004"] = np.nan
 
 
-# K005 - Laermschutz
+# K005 - Lärmschutz 
 try:
     g = get("Gebaeude")
     v = get("Verkehrsflaechen")
 
-    if g is not None and v is not None and "Geb_Hoehe" in g.columns:
+    if g is not None and v is not None and "Geb_Hoehe" in g.columns and "Nutzung" in v.columns:
+        # Kopien & Datentypen
+        g = g.copy()
+        v = v.copy()
         g["Geb_Hoehe"] = pd.to_numeric(g["Geb_Hoehe"], errors="coerce")
-        print("Geb_Hoehe Beispiel:", g["Geb_Hoehe"].head())
 
-        v["Nutzung_clean"] = v["Nutzung"].str.lower().str.replace("_", "")
-        print("Nutzung unique:", v["Nutzung_clean"].unique())
+        # Nutzung vereinheitlichen (für robuste Abfragen)
+        v["Nutzung_clean"] = (
+            v["Nutzung"].astype(str).str.strip().str.lower().str.replace("_", "", regex=False)
+        )
 
-        miv = v[v["Nutzung_clean"].isin(["Kfz_Flaeche", "Begegnungszone"])]
-        print("MIV Flächen gefunden:", miv.shape)
+        # MIV-Flächen: Kfz_Flaeche ∪ Begegnungszone
+        miv_mask = (
+            v["Nutzung"].isin(["Kfz_Flaeche", "Begegnungszone"]) |
+            v["Nutzung_clean"].isin(["kfzflaeche", "begegnungszone"])
+        )
+        miv = v.loc[miv_mask]
 
         if not miv.empty:
-            miv_puffer = miv.buffer(10)
-            g["an_miv"] = g.intersects(miv_puffer.unary_union)
-            print("Gebäude an MIV:", g["an_miv"].sum())
+            # 10-m-Puffer um MIV-Flächen und Gebäude in der Nähe markieren
+            miv_union = miv.buffer(10).unary_union
+            g["an_miv"] = g.intersects(miv_union)
 
-            hoehe_miv = g[g["an_miv"]]["Geb_Hoehe"].mean()
-            hoehe_sonstige = g[~g["an_miv"]]["Geb_Hoehe"].mean()
-            print("Höhe MIV:", hoehe_miv, "Höhe sonst:", hoehe_sonstige)
+            # Höhenvergleich (nur mit validen Höhen)
+            hoehe_miv = g.loc[g["an_miv"], "Geb_Hoehe"].mean()
+            hoehe_sonstige = g.loc[~g["an_miv"], "Geb_Hoehe"].mean()
 
             if pd.notna(hoehe_miv) and pd.notna(hoehe_sonstige):
                 if hoehe_miv > hoehe_sonstige:
@@ -147,13 +155,12 @@ try:
             else:
                 k["K005"] = np.nan
         else:
-            print("KEINE MIV Flächen gefunden!")
             k["K005"] = np.nan
     else:
         raise ValueError
-except:
+except Exception:
     k["K005"] = np.nan
-    print("K005: Lärmschutz konnte nicht berechnet werden.")
+
 
 # K006 - Erhalt Bestandsgebaeude
 try:
@@ -194,12 +201,26 @@ except:
 # K008 - Nutzungsvielfalt Freiflaechen
 try:
     oeff = get("oeffentliche_Gruenflaechen")
-    if oeff is not None and "Nutzung" in oeff.columns:
-        nutzungen = oeff["Nutzung"].dropna().unique()
-        k["K008"] = len(nutzungen)
-    else:
-        raise ValueError
-except:
+    plaetze = get("oeffentliche_Plaetze")
+
+    kategorien = set()
+
+    # Nutzungen aus öffentlichen Grünflächen
+    if oeff is not None and not oeff.empty and "Nutzung" in oeff.columns:
+        cats = (
+            oeff["Nutzung"]
+            .dropna()
+            .astype(str).str.strip().str.lower()
+        )
+        kategorien.update([c for c in cats if c != ""])
+
+    # +1, wenn öffentliche Plätze vorhanden (Layer existiert und hat mind. ein Feature)
+    platz_bonus = 1 if (plaetze is not None and not plaetze.empty) else 0
+
+    gesamt = len(kategorien) + platz_bonus
+    k["K008"] = gesamt if gesamt > 0 else np.nan
+
+except Exception:
     k["K008"] = np.nan
     
 
@@ -313,6 +334,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
