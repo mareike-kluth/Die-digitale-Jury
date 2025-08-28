@@ -35,7 +35,6 @@ for name in layer_namen:
         print(f" Gefunden: {path}")
         layers[name] = gpd.read_file(path)
     else:
-        print(f" Layer '{name}.shp' nicht gefunden.")
         layers[name] = None
 
 # Kriterien berechnen
@@ -50,7 +49,7 @@ else:
     gebietsflaeche = np.nan
 
 
-# Kriterium: Zukunftsfaehige Mobilitaet 
+# K002 - Zukunftsfaehige Mobilitaet 
 try:
     verkehr = get("Verkehrsflaechen")
     if verkehr is None or verkehr.empty or "Nutzung" not in verkehr.columns:
@@ -80,12 +79,9 @@ try:
         else:
             k["K002"] = 1
 
-    print(f"K002 Debug – Fuss_Rad: {fuss_rad:.2f}, Kfz: {kfz:.2f}, Begegnungszone: {begegnung:.2f}, Auto-Fläche: {auto_flaeche:.2f}, Ergebnis: {k['K002']}")
-
 except Exception as e:
     k["K002"] = np.nan
-    print("K002: Mobilitätsbewertung konnte nicht durchgeführt werden:", e)
-
+    
 
 # K003 - Anteil der Gruenflaechen
 try:
@@ -97,7 +93,6 @@ try:
     k["K003"] = round(gruenflaeche / gebietsflaeche, 2) if gebietsflaeche > 0 else np.nan
 except:
     k["K003"] = np.nan
-    print("K003: Anteil der Grünflächen konnte nicht berechnet werden.")
 
 
 # K004 - Einbettung in die Umgebung
@@ -116,7 +111,6 @@ try:
         raise ValueError
 except:
     k["K004"] = np.nan
-    print("K004: Einbettung in Umgebung konnte nicht berechnet werden.")
 
 
 # K005 - Laermschutz 
@@ -125,21 +119,15 @@ try:
     v = get("Verkehrsflaechen")
     if g is not None and v is not None and "Geb_Hoehe" in g.columns:
         g["Geb_Hoehe"] = pd.to_numeric(g["Geb_Hoehe"], errors="coerce")
-        print("Geb_Hoehe Beispiel:", g["Geb_Hoehe"].head())
         v["Nutzung_clean"] = v["Nutzung"].str.lower().str.replace("_", "")
-        print("Nutzung unique:", v["Nutzung_clean"].unique())
-
         miv = v[v["Nutzung_clean"].isin(["autofussrad"])]
-        print("MIV Flächen gefunden:", miv.shape)
 
         if not miv.empty:
             miv_puffer = miv.buffer(10)
             g["an_miv"] = g.intersects(miv_puffer.unary_union)
-            print("Gebäude an MIV:", g["an_miv"].sum())
 
             hoehe_miv = g[g["an_miv"]]["Geb_Hoehe"].mean()
             hoehe_sonstige = g[~g["an_miv"]]["Geb_Hoehe"].mean()
-            print("Höhe MIV:", hoehe_miv, "Höhe sonst:", hoehe_sonstige)
 
             if pd.notna(hoehe_miv) and pd.notna(hoehe_sonstige):
                 if hoehe_miv > hoehe_sonstige:
@@ -151,13 +139,11 @@ try:
             else:
                 k["K005"] = np.nan
         else:
-            print("KEINE MIV Flächen gefunden!")
             k["K005"] = np.nan
     else:
         raise ValueError
 except:
     k["K005"] = np.nan
-    print("K005: Lärmschutz konnte nicht berechnet werden.")
 
 
 # K006 - Erhalt Bestandsgebaeude
@@ -179,8 +165,7 @@ try:
         raise ValueError
 except:
     k["K006"] = np.nan
-    print("K006: Erhalt Bestandsgebäude konnte nicht berechnet werden.")
-
+    
 
 # K007 - energetische Standards: Anteil PV-Anlagen
 # Verhältnis PV-Fläche zu gesamter Gebäudefläche (als Dachfläche angenommen)
@@ -195,8 +180,7 @@ try:
         raise ValueError
 except:
     k["K007"] = np.nan
-    print("K007: Anteil PV-Anlagen konnte nicht berechnet werden.")
-
+    
 
 # K008 - Nutzungsvielfalt Freiflaechen
 try:
@@ -208,8 +192,7 @@ try:
         raise ValueError
 except:
     k["K008"] = np.nan
-    print("K008: Nutzungsvielfalt Freiflächen konnten nicht berechnet werden.")
-
+    
 
 # K009 - Zugang zum Wasser 
 try:
@@ -229,8 +212,7 @@ try:
         k["K009"] = 0
 except Exception as e:
     k["K009"] = np.nan
-    print("K009: Zugang zum Wasser konnte nicht bewertet werden:", e)
-
+    
 
 # K010 - Entsiegelung
 # Veränderung des Grünflächenanteils (neu vs. Bestand)
@@ -246,8 +228,7 @@ try:
         raise ValueError
 except:
     k["K010"] = np.nan
-    print("K010: Entsiegelung konnte nicht berechnet werden.")
-
+    
 
 # K011 - Rettungswege, Mindestwegbreite
 try:
@@ -267,8 +248,7 @@ try:
         raise ValueError
 except:
     k["K011"] = np.nan
-    print("K011: Rettungswege konnten nicht überprüft werden.")
-
+   
 
 # K012 - Anteil Dachbegruenung
 # Gesamte Gebäudefläche = angenommene Dachfläche
@@ -283,8 +263,7 @@ try:
         raise ValueError
 except:
     k["K012"] = np.nan
-    print("K012: Dachbegrünung konnte nicht berechnet werden.")
-
+    
 
 # K013 - Erhalt Baumbestand
 try:
@@ -298,8 +277,7 @@ try:
         raise ValueError
 except:
     k["K013"] = np.nan
-    print("K013: Erhalt Baumbestand konnte nicht berechnet werden.")
-
+    
 
 # K015 - Zonierung Freiflaechen
 try:
@@ -308,12 +286,12 @@ try:
     k["K015"] = 1 if hat_oeff and hat_priv else 0
 except:
     k["K015"] = np.nan
-    print("K015: Zonierung Freiflächen konnte nicht bewertet werden.")
-
+   
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
-print("Kriterienbewertung", k)
+
+
 
 
 
