@@ -56,7 +56,7 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhan
 | `Gebaeude_Umgebung.shp` | – |
 | `Dachgruen.shp` | – | 
 | `PV_Anlage.shp` | – | 
-| `Verkehrsflaechen.shp` | `Nutzung` mit `Fuss_Rad` und `Auto_Fuss_Rad` 
+| `Verkehrsflaechen.shp` | `Nutzung` mit 'Fuss_Rad', 'Kfz_Flaeche', 'Begegnungszone')
 | `Verkehrsmittellinie.shp` | – |
 | `oeffentliche_Gruenflaechen.shp` | `Nutzung` | 
 | `private_Gruenflaechen.shp` | – |
@@ -204,6 +204,7 @@ if uploaded_files:
                         )
                 else:
                     st.error("Bewertungsmatrix wurde nicht erstellt.")
+
 
 
 
