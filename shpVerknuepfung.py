@@ -115,48 +115,28 @@ except:
 
 # K005 - Laermschutz
 try:
-    g = get("Gebaeude")
-    v = get("Verkehrsflaechen")
-
-    if (
-        g is not None and not g.empty and "Geb_Hoehe" in g.columns and
-        v is not None and not v.empty and "Nutzung" in v.columns
-    ):
-        # Gebäudehöhe numerisch
-        g = g.copy()
-        g["Geb_Hoehe"] = pd.to_numeric(g["Geb_Hoehe"], errors="coerce")
-
-        # Lärmquelle definieren: Kfz_Flaeche + Begegnungszone
-        kfz        = v[v["Nutzung"] == "Kfz_Flaeche"]
-        begegnung  = v[v["Nutzung"] == "Begegnungszone"]
-        autozone   = pd.concat([kfz, begegnung], ignore_index=True)
-
-        if not autozone.empty:
-            # 10-m-Puffer um Lärmquelle
-            auto_puffer_union = autozone.buffer(10).unary_union
-
-            # Gebäude, die an der Auto-Zone liegen
-            g["an_autozone"] = g.intersects(auto_puffer_union)
-
-            # Höhenvergleich
-            hoehe_nahe = g.loc[g["an_autozone"], "Geb_Hoehe"].mean()
-            hoehe_fern = g.loc[~g["an_autozone"], "Geb_Hoehe"].mean()
-
-            if pd.notna(hoehe_nahe) and pd.notna(hoehe_fern):
-                if hoehe_nahe > hoehe_fern:
-                    k["K005"] = 2
-                elif hoehe_nahe == hoehe_fern:
-                    k["K005"] = 1
-                else:
-                    k["K005"] = 0
-            else:
-                k["K005"] = np.nan
-        else:
-            # Keine Auto-Zone identifizierbar
-            k["K005"] = np.nan
-    else:
-        # Fehlende Daten/Spalten
+    g, v = get("Gebaeude"), get("Verkehrsflaechen")
+    if g is None or v is None or "Geb_Hoehe" not in g.columns or "Nutzung" not in v.columns:
         raise ValueError
+
+    g = g.copy()
+    g["Geb_Hoehe"] = pd.to_numeric(g["Geb_Hoehe"], errors="coerce")
+
+    # Auto-Zone wie in K002: Kfz_Flaeche + Begegnungszone
+    autozone = v[v["Nutzung"].isin(["Kfz_Flaeche", "Begegnungszone"])]
+    if autozone.empty:
+        k["K005"] = np.nan
+    else:
+        near = g.intersects(autozone.buffer(10).unary_union)
+        gi = g.loc[~g["Geb_Hoehe"].isna()].copy()
+        gi["near"] = near.reindex(gi.index, fill_value=False)
+
+        if gi["near"].any() and (~gi["near"]).any():
+            m_near = gi.loc[gi["near"], "Geb_Hoehe"].mean()
+            m_far  = gi.loc[~gi["near"], "Geb_Hoehe"].mean()
+            k["K005"] = 2 if m_near > m_far else (1 if m_near == m_far else 0)
+        else:
+            k["K005"] = np.nan
 except Exception:
     k["K005"] = np.nan
 
@@ -319,6 +299,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
