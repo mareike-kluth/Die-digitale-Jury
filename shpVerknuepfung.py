@@ -113,36 +113,51 @@ except:
     k["K004"] = np.nan
 
 
-# K005 - Laermschutz 
+# K005 - Laermschutz
 try:
     g = get("Gebaeude")
     v = get("Verkehrsflaechen")
-    if g is not None and v is not None and "Geb_Hoehe" in g.columns:
+
+    if (
+        g is not None and not g.empty and "Geb_Hoehe" in g.columns and
+        v is not None and not v.empty and "Nutzung" in v.columns
+    ):
+        # Gebäudehöhe numerisch
+        g = g.copy()
         g["Geb_Hoehe"] = pd.to_numeric(g["Geb_Hoehe"], errors="coerce")
-        v["Nutzung_clean"] = v["Nutzung"].str.lower().str.replace("_", "")
-        miv = v[v["Nutzung_clean"].isin(["autofussrad"])]
 
-        if not miv.empty:
-            miv_puffer = miv.buffer(10)
-            g["an_miv"] = g.intersects(miv_puffer.unary_union)
+        # Lärmquelle definieren: Kfz_Flaeche + Begegnungszone
+        kfz        = v[v["Nutzung"] == "Kfz_Flaeche"]
+        begegnung  = v[v["Nutzung"] == "Begegnungszone"]
+        autozone   = pd.concat([kfz, begegnung], ignore_index=True)
 
-            hoehe_miv = g[g["an_miv"]]["Geb_Hoehe"].mean()
-            hoehe_sonstige = g[~g["an_miv"]]["Geb_Hoehe"].mean()
+        if not autozone.empty:
+            # 10-m-Puffer um Lärmquelle
+            auto_puffer_union = autozone.buffer(10).unary_union
 
-            if pd.notna(hoehe_miv) and pd.notna(hoehe_sonstige):
-                if hoehe_miv > hoehe_sonstige:
+            # Gebäude, die an der Auto-Zone liegen
+            g["an_autozone"] = g.intersects(auto_puffer_union)
+
+            # Höhenvergleich
+            hoehe_nahe = g.loc[g["an_autozone"], "Geb_Hoehe"].mean()
+            hoehe_fern = g.loc[~g["an_autozone"], "Geb_Hoehe"].mean()
+
+            if pd.notna(hoehe_nahe) and pd.notna(hoehe_fern):
+                if hoehe_nahe > hoehe_fern:
                     k["K005"] = 2
-                elif hoehe_miv == hoehe_sonstige:
+                elif hoehe_nahe == hoehe_fern:
                     k["K005"] = 1
                 else:
                     k["K005"] = 0
             else:
                 k["K005"] = np.nan
         else:
+            # Keine Auto-Zone identifizierbar
             k["K005"] = np.nan
     else:
+        # Fehlende Daten/Spalten
         raise ValueError
-except:
+except Exception:
     k["K005"] = np.nan
 
 
@@ -304,6 +319,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
