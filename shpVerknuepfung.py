@@ -220,13 +220,27 @@ try:
     alt = get("Bestandsgruen")
     oeff = get("oeffentliche_Gruenflaechen")
     priv = get("private_Gruenflaechen")
-    if alt is not None and (oeff is not None or priv is not None):
-        altf = alt.geometry.area.sum() if alt is not None else 0
-        neu = (oeff.geometry.area.sum() if oeff is not None else 0) + (priv.geometry.area.sum() if priv is not None else 0)
-        k["K010"] = round((neu - altf) / gebietsflaeche, 2) if gebietsflaeche > 0 else np.nan
+
+    # Keine neuen Grünflächen vorhanden -> keine Verbesserung
+    if oeff is None and priv is None:
+        k["K010"] = 0.0
     else:
-        raise ValueError
-except:
+        neu = (
+            (oeff.geometry.area.sum() if oeff is not None else 0.0) +
+            (priv.geometry.area.sum() if priv is not None else 0.0)
+        )
+
+        if gebietsflaeche and gebietsflaeche > 0:
+            # Wenn Bestandsgrün vorhanden: klassische Differenz
+            if alt is not None and not alt.empty:
+                altf = alt.geometry.area.sum()
+                k["K010"] = round((neu - altf) / gebietsflaeche, 2)
+            else:
+                # Kein Bestandsgrün: positiv werten (Proxy = neu / Gebietsfläche)
+                k["K010"] = round(neu / gebietsflaeche, 2)
+        else:
+            k["K010"] = np.nan
+except Exception:
     k["K010"] = np.nan
     
 
@@ -290,6 +304,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
