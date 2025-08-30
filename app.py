@@ -9,29 +9,89 @@ import geopandas as gpd
 import joblib
 import glob
 import sys
-import numpy as np
 
-# --------------------------------------
+
 # Einstellungen & Metadaten
-# --------------------------------------
-st.set_page_config(page_title="Die Digitale Jury", layout="centered")
+
+st.set_page_config(
+    page_title="Die Digitale Jury",
+    layout="centered"
+)
 st.title("Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
 st.markdown("""
+######
 Willkommen bei der **digitalen Jury**!  
 Dieses Tool bewertet städtebauliche Entwürfe **automatisch** anhand von **13 Kriterien** mit einem trainierten **Random-Forest-Modell**.
 
-**Benötigte Layer (sofern vorhanden):**  
-`Gebaeude.shp (Geb_Hoehe)`, `Gebaeude_Umgebung.shp`, `Dachgruen.shp`, `PV_Anlage.shp`,  
-`Verkehrsflaechen.shp (Nutzung: Fuss_Rad / Kfz_Flaeche / Begegnungszone)`, `Verkehrsmittellinie.shp`,  
-`oeffentliche_Gruenflaechen.shp (Nutzung)`, `private_Gruenflaechen.shp`, `oeffentliche_Plaetze.shp`,  
-`Wasser.shp`, `Baeume_Entwurf.shp`, `Bestandsbaeume.shp`, `Bestandsgruen.shp`, `Gebietsabgrenzung.shp`.
+---
+
+### **So funktioniert es**
+
+**Entwurf vorbereiten:**  
+Speichere deine Geodaten der Entwürfe im **Shapefile-Format** (`.shp`) mit den **exakten Dateinamen** (siehe Tabelle unten).  
+Jedes `.shp` benötigt seine zugehörigen Begleitdateien (`.shx`, `.dbf`, `.prj`).  
+Diese müssen **alle zusammen** in **einer ZIP-Datei** gepackt werden.
+
+Die Kriterien werden automatisch berechnet, fehlende Werte werden mit `0` ersetzt.  
+Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis 5 Sternen**.
+
+---
+
+### **Benötigte Dateien und Datenstruktur**
+
+**Wichtig:** 
+In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
+Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Tabelle.  
+Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein, wie unten angegeben. Beachte auch die Groß- und Kleinschreibung. 
+Alle Dateien müssen im passenden **Koordinatensystem** vorliegen.
+
+Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
+Wenn ein Layer oder Attribut fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
+
+Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhanden):
+
+| Layer | Benötigte Spalten |
+|-----------------------------|------------------------------|
+| `Gebaeude.shp` | `Geb_Hoehe` |
+| `Gebaeude_Umgebung.shp` | – |
+| `Dachgruen.shp` | – | 
+| `PV_Anlage.shp` | – | 
+| `Verkehrsflaechen.shp` | `Nutzung` mit `Fuss_Rad`, `Kfz_Flaeche`, `Begegnungszone`
+| `Verkehrsmittellinie.shp` | – |
+| `oeffentliche_Gruenflaechen.shp` | `Nutzung` | 
+| `private_Gruenflaechen.shp` | – |
+| `oeffentliche_Plaetze` | – |
+| `Wasser.shp` | – |
+| `Baeume_Entwurf.shp` | – | 
+| `Bestandsbaeume.shp` | – | 
+| `Bestandsgruen.shp` | – | 
+| `Gebietsabgrenzung.shp` | – | 
+
+---
+
+
+### **Hochladen**
+
+Nutze das Upload-Feld unten, um deine **ZIP-Datei** hochzuladen.  
+Du kannst auch **mehrere ZIPs gleichzeitig** hochladen, um Entwürfe direkt zu vergleichen.
+
+---
+
+### **Ergebnis & Download**
+
+Nach der automatischen Bewertung kannst du:
+- alle berechneten Kriterien und die Sternebewertung einsehen
+- die Ergebnisse als **Excel-Datei herunterladen**
+
 """)
 
-uploaded_files = st.file_uploader("Entwürfe als ZIP hochladen", type="zip", accept_multiple_files=True)
 
-# --------------------------------------
-# Modell laden (Feature-Order sichern)
-# --------------------------------------
+uploaded_files = st.file_uploader(
+    "Entwürfe als ZIP hochladen",
+    type="zip",
+    accept_multiple_files=True
+)
+
 MODEL_PATH = "final_RF_model.pkl"
 try:
     bundle = joblib.load(MODEL_PATH)
@@ -195,3 +255,12 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
+
+
+
+
+
+
+
+
