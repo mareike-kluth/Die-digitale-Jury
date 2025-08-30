@@ -112,7 +112,7 @@ if uploaded_files:
                 # Erwartete Layer prüfen
                 erwartete_layer = [
                     "Gebaeude.shp", "Gebaeude_Umgebung.shp", "Verkehrsflaechen.shp", "Verkehrsmittellinie.shp",
-                    "Dachgruen.shp", "PV_Anlage.shp", "oeffentliche_Gruenflaechen.shp", "private_Gruenflaechen.shp", "oeffentliche_Plaetze", 
+                    "Dachgruen.shp", "PV_Anlage.shp", "oeffentliche_Gruenflaechen.shp", "private_Gruenflaechen.shp", "oeffentliche_Plaetze.shp", 
                     "Wasser.shp", "Baeume_Entwurf.shp", "Bestandsbaeume.shp", "Bestandsgruen.shp", "Gebietsabgrenzung.shp"
                 ]
 
@@ -204,6 +204,7 @@ if uploaded_files:
                         )
                 else:
                     st.error("Bewertungsmatrix wurde nicht erstellt.")
+
 
 
 
