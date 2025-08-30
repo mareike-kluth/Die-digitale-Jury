@@ -85,13 +85,15 @@ except Exception as e:
 
 # K003 - Anteil der Gruenflaechen
 try:
-    gruenflaeche = sum([
-        get("oeffentliche_Gruenflaechen").geometry.area.sum() if get("oeffentliche_Gruenflaechen") is not None else 0,
-        get("private_Gruenflaechen").geometry.area.sum() if get("private_Gruenflaechen") is not None else 0,
-        get("Wasser").geometry.area.sum() if get("Wasser") is not None else 0
-    ])
-    k["K003"] = round(gruenflaeche / gebietsflaeche, 2) if gebietsflaeche > 0 else np.nan
-except:
+    oeff = get("oeffentliche_Gruenflaechen")
+    priv = get("private_Gruenflaechen")
+
+    fl_oeff = oeff.geometry.area.sum() if oeff is not None else 0.0
+    fl_priv = priv.geometry.area.sum() if priv is not None else 0.0
+
+    gruenflaeche = fl_oeff + fl_priv
+    k["K003"] = round(gruenflaeche / gebietsflaeche, 2) if (gebietsflaeche and gebietsflaeche > 0) else np.nan
+except Exception:
     k["K003"] = np.nan
 
 
@@ -328,6 +330,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
