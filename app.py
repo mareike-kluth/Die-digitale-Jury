@@ -95,14 +95,7 @@ uploaded_files = st.file_uploader(
 MODEL_PATH = "final_RF_model.pkl"
 
 try:
-    bundle = joblib.load(MODEL_PATH)
-    if isinstance(bundle, dict) and "model" in bundle and "features" in bundle:
-        rf_model = bundle["model"]
-        FEATURE_ORDER = bundle["features"]
-    else:
-        rf_model = bundle  # altes Format
-        # >>> EXAKT die Trainings-Featureliste angeben (z. B. ohne K001 & K014) <<<
-        FEATURE_ORDER = ["K002","K003","K004","K005","K006","K007","K008","K009","K010","K011","K012","K013","K015"]
+    rf_model = joblib.load(MODEL_PATH)
 except Exception as e:
     st.error(f"Bewertungsmodell konnte nicht geladen werden: {e}")
     st.stop()
@@ -119,20 +112,28 @@ if uploaded_files:
                 # Erwartete Layer prüfen
                 erwartete_layer = [
                     "Gebaeude.shp", "Gebaeude_Umgebung.shp", "Verkehrsflaechen.shp", "Verkehrsmittellinie.shp",
-                    "Dachgruen.shp", "PV_Anlage.shp", "oeffentliche_Gruenflaechen.shp", "private_Gruenflaechen.shp",
-                    "oeffentliche_Plaetze.shp", "Wasser.shp", "Baeume_Entwurf.shp", "Bestandsbaeume.shp",
-                    "Bestandsgruen.shp", "Gebietsabgrenzung.shp"
+                    "Dachgruen.shp", "PV_Anlage.shp", "oeffentliche_Gruenflaechen.shp", "private_Gruenflaechen.shp", "oeffentliche_Plaetze.shp", 
+                    "Wasser.shp", "Baeume_Entwurf.shp", "Bestandsbaeume.shp", "Bestandsgruen.shp", "Gebietsabgrenzung.shp"
                 ]
-                fehlen = [layer for layer in erwartete_layer if not glob.glob(os.path.join(tmpdir, layer))]
+
+                fehlen = []
+                for layer in erwartete_layer:
+                    if not glob.glob(os.path.join(tmpdir, layer)):
+                        fehlen.append(layer)
+
                 if fehlen:
                     st.warning(f"Achtung: Folgende Layer fehlen: {', '.join(fehlen)}")
 
-                # Layer- & Attribut-Check
+               
+                import geopandas as gpd
+
+                # Layer- & Attribut-Check                               
                 erwartete_attributs = {
                     "Verkehrsflaechen": ["Nutzung"],
                     "Gebaeude": ["Geb_Hoehe"],
                     "oeffentliche_Gruenflaechen": ["Nutzung"]
                 }
+                
                 for layer_name, attrs in erwartete_attributs.items():
                     shp_path = os.path.join(tmpdir, f"{layer_name}.shp")
                     if os.path.exists(shp_path):
@@ -142,46 +143,24 @@ if uploaded_files:
                                 st.warning(f" `{attr}` fehlt in `{layer_name}.shp`")
                     else:
                         st.warning(f" `{layer_name}.shp` fehlt!")
-
-                # Skript ausführen (berechnet K002–K015 und schreibt Kriterien_Ergebnisse.xlsx)
+                
+                # Skript ausführen
                 shutil.copy("shpVerknuepfung.py", tmpdir)
+                
                 result = subprocess.run(
                     [sys.executable, "shpVerknuepfung.py", tmpdir],
                     cwd=tmpdir,
                     capture_output=True,
                     text=True
                 )
-                if result.stderr:
-                    st.info("Log aus shpVerknuepfung.py:")
-                    st.code(result.stderr)
+
 
                 # Ergebnisse einlesen & Modell anwenden
                 kriterien_path = os.path.join(tmpdir, "Kriterien_Ergebnisse.xlsx")
                 if os.path.exists(kriterien_path):
                     df = pd.read_excel(kriterien_path).fillna(0)
 
-                    # --- Feature-Matrix exakt wie im Training herstellen ---
-                    for col in FEATURE_ORDER:
-                        if col not in df.columns:
-                            df[col] = 0.0
-                    df_features = df[FEATURE_ORDER].copy()
-
-                    # Diagnose: Null-Anteil
-                    zero_share = (df_features == 0).mean(axis=1).iloc[0] if not df_features.empty else 1.0
-                    st.write(f"🧪 Null-Anteil im Featurevektor: {zero_share:.0%}")
-                    if zero_share >= 0.8:
-                        st.warning("Sehr viele 0-Werte → wenig Signal. Ergebnis kann in die Mehrheitsklasse kippen (z. B. 2 Sterne).")
-
-                    # Vorhersage
-                    try:
-                        prediction = rf_model.predict(df_features)[0]
-                        sterne = int(prediction)
-                        st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
-                    except Exception as e:
-                        st.error(f"Vorhersage fehlgeschlagen: {e}")
-                        st.stop()
-
-                    # Für UI-Tabelle: schöne Bezeichnungen
+                    # Mapping: Kürzel zu Beschreibung
                     KRITERIEN_BESCHREIBUNGEN = {
                         "K002": "Zukunftsfähige Mobilität",
                         "K003": "Anteil Freiflächen",
@@ -198,20 +177,24 @@ if uploaded_files:
                         "K015": "Freiflächen Zonierung"
                     }
 
-                    st.subheader("Eingabewerte (an das Modell übergeben)")
-                    df_long = df_features.iloc[[0]].T.reset_index()
-                    df_long.columns = ["Kriterium", "Wert"]
-                    df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN).fillna(df_long["Kriterium"])
+                    kriterien_spalten = [col for col in df.columns if col.startswith("K")]
+                    prediction = rf_model.predict(df[kriterien_spalten])[0]
+                    sterne = int(prediction)
+                    st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
+                
+                    # Für Anzeige in der App
+                    df_long = df[kriterien_spalten].transpose().reset_index()
+                    df_long.columns = ["Kriterium", "Bewertung"]
+                    df_long["Kriterium"] = df_long["Kriterium"].map(KRITERIEN_BESCHREIBUNGEN)
                     st.dataframe(df_long)
-
+                
                     # Für Excel-Download → Spalten umbenennen
-                    df_export = df_features.copy()
-                    df_export.columns = [KRITERIEN_BESCHREIBUNGEN.get(c, c) for c in df_export.columns]
-                    df_export["Anzahl Sterne"] = sterne
-
+                    df_umbenannt = df.rename(columns=KRITERIEN_BESCHREIBUNGEN)
+                    df_umbenannt["Anzahl Sterne"] = sterne
+                
                     output_path = os.path.join(tmpdir, f"Bewertung_{zip_file.name}.xlsx")
-                    df_export.to_excel(output_path, index=False)
-
+                    df_umbenannt.to_excel(output_path, index=False)
+                
                     with open(output_path, "rb") as f:
                         st.download_button(
                             "Ergebnis als Excel herunterladen",
