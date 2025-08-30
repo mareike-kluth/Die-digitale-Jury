@@ -32,7 +32,6 @@ for name in layer_namen:
     matches = glob.glob(os.path.join(projektpfad, "**", name + ".shp"), recursive=True)
     if matches:
         path = matches[0]
-        print(f" Gefunden: {path}")
         layers[name] = gpd.read_file(path)
     else:
         layers[name] = None
@@ -330,6 +329,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
