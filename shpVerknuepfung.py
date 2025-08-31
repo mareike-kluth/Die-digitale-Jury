@@ -242,32 +242,31 @@ except Exception as e:
 # K010 - Entsiegelung
 # Veränderung des Grünflächenanteils (neu vs. Bestand)
 try:
-    alt = get("Bestandsgruen")
+    alt  = get("Bestandsgruen")
     oeff = get("oeffentliche_Gruenflaechen")
     priv = get("private_Gruenflaechen")
 
-    # Keine neuen Grünflächen vorhanden -> keine Verbesserung
-    if oeff is None and priv is None:
-        k["K010"] = 0.0
+    if not (gebietsflaeche and gebietsflaeche > 0):
+        k["K010"] = np.nan
     else:
-        neu = (
+        neu_gruen = (
             (oeff.geometry.area.sum() if oeff is not None else 0.0) +
             (priv.geometry.area.sum() if priv is not None else 0.0)
         )
 
-        if gebietsflaeche and gebietsflaeche > 0:
-            # Wenn Bestandsgrün vorhanden: klassische Differenz
-            if alt is not None and not alt.empty:
-                altf = alt.geometry.area.sum()
-                k["K010"] = round((neu - altf) / gebietsflaeche, 2)
-            else:
-                # Kein Bestandsgrün: positiv werten (Proxy = neu / Gebietsfläche)
-                k["K010"] = round(neu / gebietsflaeche, 2)
+        if alt is None:
+            # Layer fehlt -> Zero-Fill (kein Bonus)
+            k["K010"] = 0.0
+        elif alt.empty:
+            # Layer existiert, aber leer -> Anteil der neuen Grünflächen (ohne Wasser)
+            k["K010"] = round(neu_gruen / gebietsflaeche, 2)
         else:
-            k["K010"] = np.nan
+            # Klassische Differenz neu(ohne Wasser) - alt
+            altf = alt.geometry.area.sum()
+            k["K010"] = round((neu_gruen - altf) / gebietsflaeche, 2)
 except Exception:
     k["K010"] = np.nan
-    
+
 
 # K011 - Rettungswege, Mindestwegbreite
 try:
@@ -329,6 +328,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
