@@ -120,36 +120,43 @@ if uploaded_files:
                 # --- Entpacken
                 with zipfile.ZipFile(zip_file, "r") as zip_ref:
                     zip_ref.extractall(tmpdir)
-
-                # --- Erwartete Layer prüfen
+                # --- Erwartete Layer prüfen (einmalige Sammelmeldung) ---
                 erwartete_layer = [
                     "Gebaeude.shp","Gebaeude_Umgebung.shp","Verkehrsflaechen.shp","Verkehrsmittellinie.shp",
                     "Dachgruen.shp","PV_Anlage.shp","oeffentliche_Gruenflaechen.shp","private_Gruenflaechen.shp",
                     "oeffentliche_Plaetze.shp","Wasser.shp","Baeume_Entwurf.shp","Bestandsbaeume.shp",
                     "Bestandsgruen.shp","Gebietsabgrenzung.shp"
                 ]
-                fehlen = [ly for ly in erwartete_layer if not glob.glob(os.path.join(tmpdir, ly))]
-                if fehlen:
-                    st.warning("Fehlende Layer: " + ", ".join(fehlen))
-
-                # --- Attribut-Checks (minimal)
+                
+                missing_layers = [ly for ly in erwartete_layer if not os.path.exists(os.path.join(tmpdir, ly))]
+                if missing_layers:
+                    st.warning("Fehlende Layer: " + ", ".join(missing_layers))
+                
+                # --- Attribut-Checks (nur für vorhandene Layer; keine zweite 'fehlt!'-Meldung) ---
                 erwartete_attributs = {
                     "Verkehrsflaechen": ["Nutzung"],
                     "Gebaeude": ["Geb_Hoehe"],
-                    "oeffentliche_Gruenflaechen": ["Nutzung"]
+                    "oeffentliche_Gruenflaechen": ["Nutzung"],
                 }
+                
                 for layer_name, attrs in erwartete_attributs.items():
                     shp_path = os.path.join(tmpdir, f"{layer_name}.shp")
-                    if os.path.exists(shp_path):
-                        try:
-                            layer = gpd.read_file(shp_path)
-                            for attr in attrs:
-                                if attr not in layer.columns:
-                                    st.warning(f"`{attr}` fehlt in `{layer_name}.shp`")
-                        except Exception as e:
-                            st.warning(f"`{layer_name}.shp` konnte nicht gelesen werden: {e}")
-                    else:
-                        st.warning(f"`{layer_name}.shp` fehlt!")
+                
+                    # Wenn der Layer fehlt, hier NICHT nochmal warnen (bereits oben gesammelt)
+                    if not os.path.exists(shp_path):
+                        continue
+                
+                    try:
+                        layer = gpd.read_file(shp_path)
+                    except Exception as e:
+                        st.warning(f"`{layer_name}.shp` konnte nicht gelesen werden: {e}")
+                        continue
+                
+                    missing_attrs_in_layer = [a for a in attrs if a not in layer.columns]
+                    if missing_attrs_in_layer:
+                        st.warning(
+                            f"In `{layer_name}.shp` fehlen folgende Attribute: {', '.join(missing_attrs_in_layer)}"
+                        )
 
                 # --- Berechnungsskript starten
                 try:
@@ -255,6 +262,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
