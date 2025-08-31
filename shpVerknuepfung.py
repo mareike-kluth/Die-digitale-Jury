@@ -220,24 +220,33 @@ except Exception:
     
 
 # K009 - Zugang zum Wasser 
+# K009 - Zugang zum Wasser (inkl. oeffentliche_Plaetze)
 try:
-    wasser = get("Wasser")
-    oeff = get("oeffentliche_Gruenflaechen")
-    if wasser is not None and not wasser.empty and oeff is not None and not oeff.empty:
-        oeff_union = oeff.unary_union.buffer(2)  # Puffer nur einmal, Union ist stabil
-        wasser["an_oeff"] = wasser.intersects(oeff_union)
+    wasser  = get("Wasser")
+    oeff    = get("oeffentliche_Gruenflaechen")
+    plaetze = get("oeffentliche_Plaetze")
 
-        if wasser["an_oeff"].any():
-            k["K009"] = 2  # Erlebbar
+    if wasser is not None and not wasser.empty:
+        access_layers = [gdf for gdf in (oeff, plaetze) if gdf is not None and not gdf.empty]
+
+        if access_layers:
+            # Geometrien zusammenführen und Shapely-2-kompatibel vereinigen
+            geoms = pd.concat([gdf.geometry for gdf in access_layers], ignore_index=True)
+            access_union = geoms.union_all() if hasattr(geoms, "union_all") else geoms.unary_union
+            access_buf = access_union.buffer(2)
+
+            # Wasser an öffentlichen Grünflächen/Plätzen (mit 2 m Puffer) erlebbar?
+            is_accessible = wasser.intersects(access_buf).any()
+            k["K009"] = 2 if is_accessible else 1
         else:
-            k["K009"] = 1  # Funktional
-    elif wasser is not None and not wasser.empty:
-        k["K009"] = 1
+            # Wasser vorhanden, aber keine öffentlichen Zugangsflächen
+            k["K009"] = 1
     else:
+        # Kein Wasser im Gebiet
         k["K009"] = 0
-except Exception as e:
+except Exception:
     k["K009"] = np.nan
-    
+
 
 # K010 - Entsiegelung
 # Veränderung des Grünflächenanteils (neu vs. Bestand)
@@ -328,6 +337,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
