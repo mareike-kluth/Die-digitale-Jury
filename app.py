@@ -158,36 +158,6 @@ if uploaded_files:
                             f"In `{layer_name}.shp` fehlen folgende Attribute: {', '.join(missing_attrs_in_layer)}"
                         )
 
-                # --- Berechnungsskript starten und Logs anzeigen ---
-                    # --- Berechnungsskript starten und Logs anzeigen ---
-                    try:
-                        shutil.copy("shpVerknuepfung.py", tmpdir)
-                    except Exception as e:
-                        st.error(f"`shpVerknuepfung.py` konnte nicht in das Temp-Verzeichnis kopiert werden: {e}")
-                        st.stop()
-                    
-                    result = subprocess.run(
-                        [sys.executable, "-u", "shpVerknuepfung.py", tmpdir],  # -u = unbuffered stdout/stderr
-                        cwd=tmpdir,
-                        capture_output=True,   # fängt stdout und stderr ein
-                        text=True,
-                        env={**os.environ, "PYTHONUNBUFFERED": "1"}  # zusätzliche Sicherheit gegen Buffering
-                    )
-                    
-                    # Logs IMMER anzeigen – so siehst du deine print-Logs (stdout) UND Warnungen/Fehler (stderr)
-                    if result.stdout:
-                        with st.expander("Ausgabe (stdout)"):
-                            st.code(result.stdout)
-                    
-                    if result.stderr:
-                        with st.expander("Warnungen/Fehler (stderr)"):
-                            st.code(result.stderr)
-                    
-                    # Abbruch, wenn das Skript nicht erfolgreich war
-                    if result.returncode != 0:
-                        st.error("Fehler beim Ausführen von shpVerknuepfung.py")
-                        st.stop()
-
                 # --- Berechnungsskript starten
                 try:
                     shutil.copy("shpVerknuepfung.py", tmpdir)
