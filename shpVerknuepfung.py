@@ -314,6 +314,7 @@ except Exception:
     k["K011"] = np.nan
 
 
+
 # K012 - Anteil Dachbegruenung
 # Gesamte Gebäudefläche = angenommene Dachfläche
 try:
@@ -354,6 +355,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
