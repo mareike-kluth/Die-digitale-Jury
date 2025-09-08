@@ -220,7 +220,6 @@ except Exception:
     
 
 # K009 - Zugang zum Wasser 
-# K009 - Zugang zum Wasser (inkl. oeffentliche_Plaetze)
 try:
     wasser  = get("Wasser")
     oeff    = get("oeffentliche_Gruenflaechen")
@@ -278,6 +277,8 @@ except Exception:
 
 
 # K011 - Rettungswege, Mindestwegbreite
+# K011 – Rettungswege, Mindestwegbreite (Gebäude + Grünflächen + öffentliche Plätze)
+# Zählt NUR echte Überlappung (Fläche > 0), Berührung am Rand (touch) ist OK.
 try:
     ml  = get("Verkehrsmittellinie")
     g   = get("Gebaeude")
@@ -285,33 +286,54 @@ try:
     gp  = get("private_Gruenflaechen")
     pl  = get("oeffentliche_Plaetze")
 
-    # Blocker: Gebäude, öffentliche & private Grünflächen, öffentliche Plätze
-    blockers = [df for df in (g, go, gp, pl) if df is not None and not df.empty]
+    # Nur echte Blocker laden und leere rausfiltern
+    raw_blockers = [df for df in (g, go, gp, pl) if df is not None and not df.empty]
 
     if ml is None or ml.empty:
         k["K011"] = np.nan
-    elif not blockers:
-        # Es gibt nichts, was den Korridor blockieren könnte → frei
+    elif not raw_blockers:
         k["K011"] = 1
     else:
-        # 3-m-Korridor (±1.5 m) um Mittellinien bilden und vereinigen
-        corridors = ml.geometry.buffer(1.5)
-        try:
-            from shapely import union_all  # Shapely 2+
-            corridor_u = union_all(corridors)
-        except Exception:
-            corridor_u = corridors.unary_union  # Fallback
+        # Nur Polygon-/MultiPolygon-Geometrien als Blocker; Geometrien säubern
+        def only_polys(df):
+            df = df[df.geometry.notna()].copy()
+            df = df[df.geometry.type.isin(["Polygon", "MultiPolygon"])]
+            if not df.empty:
+                df["geometry"] = df.geometry.buffer(0)  # fix invalids
+            return df
 
-        # Alle Blocker-Geometrien zusammenführen
-        ziel = pd.concat([b[["geometry"]] for b in blockers], ignore_index=True)
+        blockers = [only_polys(df) for df in raw_blockers]
+        blockers = [df for df in blockers if not df.empty]
 
-        # Überschneidet der Korridor irgendwo die Blocker?
-        has_overlap = ziel.intersects(corridor_u).any()
+        if not blockers:
+            k["K011"] = 1
+        else:
+            # 3-m-Korridor (±1.5 m) um Mittellinien, vereinigen & säubern
+            corridors = ml.geometry.buffer(1.5).buffer(0)
+            try:
+                from shapely import union_all  # Shapely 2+
+                corridor_u = union_all(corridors)
+            except Exception:
+                corridor_u = corridors.unary_union  # Fallback
 
-        # 0 = blockiert / 1 = frei
-        k["K011"] = 0 if has_overlap else 1
+            # Alle Blocker-Polygone zusammenführen
+            ziel = pd.concat([b[["geometry"]] for b in blockers], ignore_index=True)
+
+            # Zuerst grob: welche Blocker schneiden den Korridor überhaupt?
+            mask = ziel.intersects(corridor_u)
+
+            if mask.any():
+                # Feincheck: nur echte Flächenüberdeckung zählen (Berührung ignorieren)
+                inter = ziel.loc[mask, "geometry"].intersection(corridor_u)
+                has_overlap = (inter.area > 1e-6).any()  # Toleranz gegen Rundungsartefakte
+            else:
+                has_overlap = False
+
+            # 0 = blockiert (echte Überlappung) / 1 = frei (nur Touch oder nichts)
+            k["K011"] = 0 if has_overlap else 1
 except Exception:
     k["K011"] = np.nan
+
 
 
 
@@ -355,6 +377,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
