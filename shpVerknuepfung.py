@@ -279,23 +279,40 @@ except Exception:
 
 # K011 - Rettungswege, Mindestwegbreite
 try:
-    mittellinie = get("Verkehrsmittellinie")
-    g = get("Gebaeude")
-    oeff = get("oeffentliche_Gruenflaechen")
-    priv = get("private_Gruenflaechen")
-    if mittellinie is not None and (g is not None or oeff is not None or priv is not None):
-        puffer = mittellinie.copy()
-        puffer["geometry"] = puffer.geometry.buffer(1.5)
-        ziel = pd.concat([
-            df for df in [g, oeff, priv] if df is not None
-        ], ignore_index=True)
-        u = gpd.overlay(puffer, ziel, how="intersection", keep_geom_type=False)
-        k["K011"] = 0 if not u.empty else 1
+    ml  = get("Verkehrsmittellinie")
+    g   = get("Gebaeude")
+    go  = get("oeffentliche_Gruenflaechen")
+    gp  = get("private_Gruenflaechen")
+    pl  = get("oeffentliche_Plaetze")
+
+    # Blocker: Gebäude, öffentliche & private Grünflächen, öffentliche Plätze
+    blockers = [df for df in (g, go, gp, pl) if df is not None and not df.empty]
+
+    if ml is None or ml.empty:
+        k["K011"] = np.nan
+    elif not blockers:
+        # Es gibt nichts, was den Korridor blockieren könnte → frei
+        k["K011"] = 1
     else:
-        raise ValueError
-except:
+        # 3-m-Korridor (±1.5 m) um Mittellinien bilden und vereinigen
+        corridors = ml.geometry.buffer(1.5)
+        try:
+            from shapely import union_all  # Shapely 2+
+            corridor_u = union_all(corridors)
+        except Exception:
+            corridor_u = corridors.unary_union  # Fallback
+
+        # Alle Blocker-Geometrien zusammenführen
+        ziel = pd.concat([b[["geometry"]] for b in blockers], ignore_index=True)
+
+        # Überschneidet der Korridor irgendwo die Blocker?
+        has_overlap = ziel.intersects(corridor_u).any()
+
+        # 0 = blockiert / 1 = frei
+        k["K011"] = 0 if has_overlap else 1
+except Exception:
     k["K011"] = np.nan
-   
+
 
 # K012 - Anteil Dachbegruenung
 # Gesamte Gebäudefläche = angenommene Dachfläche
@@ -337,6 +354,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
