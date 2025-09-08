@@ -277,8 +277,7 @@ except Exception:
 
 
 # K011 - Rettungswege, Mindestwegbreite
-# K011 – Rettungswege, Mindestwegbreite (Gebäude + Grünflächen + öffentliche Plätze)
-# Zählt NUR echte Überlappung (Fläche > 0), Berührung am Rand (touch) ist OK.
+# K011 – Rettungswege, Mindestwegbreite (mit Debug-Ausgabe der Überschneidungen)
 try:
     ml  = get("Verkehrsmittellinie")
     g   = get("Gebaeude")
@@ -286,15 +285,40 @@ try:
     gp  = get("private_Gruenflaechen")
     pl  = get("oeffentliche_Plaetze")
 
-    # Nur echte Blocker laden und leere rausfiltern
-    raw_blockers = [df for df in (g, go, gp, pl) if df is not None and not df.empty]
+    # Referenz-CRS (wichtig für Meter-Puffer)
+    ref = (ml.crs if ml is not None and ml.crs is not None else "EPSG:25832")
+
+    def align(df):
+        if df is None or df.empty:
+            return None
+        if df.crs is None:
+            return df.set_crs(ref)
+        if df.crs != ref:
+            return df.to_crs(ref)
+        return df
+
+    ml  = align(ml)
+    g   = align(g)
+    go  = align(go)
+    gp  = align(gp)
+    pl  = align(pl)
+
+    # Blocker: Gebäude, öffentliche & private Grünflächen, öffentliche Plätze
+    raw_blockers = []
+    if g  is not None and not g.empty:   raw_blockers.append(g.assign(quelle="Gebaeude"))
+    if go is not None and not go.empty:  raw_blockers.append(go.assign(quelle="oeffentliche_Gruenflaechen"))
+    if gp is not None and not gp.empty:  raw_blockers.append(gp.assign(quelle="private_Gruenflaechen"))
+    if pl is not None and not pl.empty:  raw_blockers.append(pl.assign(quelle="oeffentliche_Plaetze"))
 
     if ml is None or ml.empty:
         k["K011"] = np.nan
+
     elif not raw_blockers:
+        # Nichts kann blockieren → frei
         k["K011"] = 1
+
     else:
-        # Nur Polygon-/MultiPolygon-Geometrien als Blocker; Geometrien säubern
+        # nur Polygone als Blocker; Geometrien säubern
         def only_polys(df):
             df = df[df.geometry.notna()].copy()
             df = df[df.geometry.type.isin(["Polygon", "MultiPolygon"])]
@@ -308,32 +332,63 @@ try:
         if not blockers:
             k["K011"] = 1
         else:
-            # 3-m-Korridor (±1.5 m) um Mittellinien, vereinigen & säubern
+            # 3-m-Korridor (±1.5 m) um Mittellinien → vereinigen
             corridors = ml.geometry.buffer(1.5).buffer(0)
             try:
-                from shapely import union_all  # Shapely 2+
+                from shapely import union_all   # Shapely 2+
                 corridor_u = union_all(corridors)
             except Exception:
                 corridor_u = corridors.unary_union  # Fallback
 
-            # Alle Blocker-Polygone zusammenführen
-            ziel = pd.concat([b[["geometry"]] for b in blockers], ignore_index=True)
+            corridor_gdf = gpd.GeoDataFrame(geometry=[corridor_u], crs=ref)
 
-            # Zuerst grob: welche Blocker schneiden den Korridor überhaupt?
-            mask = ziel.intersects(corridor_u)
+            # Alle Blocker zusammenführen (nur geometry + quelle)
+            all_blockers = pd.concat([b[["geometry","quelle"]] for b in blockers], ignore_index=True)
+            all_blockers = gpd.GeoDataFrame(all_blockers, geometry="geometry", crs=ref)
 
+            # Grob: nur Blocker, die überhaupt schneiden
+            mask = all_blockers.intersects(corridor_u)
             if mask.any():
-                # Feincheck: nur echte Flächenüberdeckung zählen (Berührung ignorieren)
-                inter = ziel.loc[mask, "geometry"].intersection(corridor_u)
-                has_overlap = (inter.area > 1e-6).any()  # Toleranz gegen Rundungsartefakte
+                # Exakte Schnittflächen bilden
+                inter = gpd.overlay(all_blockers.loc[mask], corridor_gdf, how="intersection", keep_geom_type=False)
+                if not inter.empty:
+                    inter["area_m2"] = inter.geometry.area
+                    # Nur echte Überlappungen (keine reine Berührung)
+                    inter = inter[inter["area_m2"] > 1e-6].copy()
+                else:
+                    inter = gpd.GeoDataFrame(columns=["geometry","quelle","area_m2"], geometry="geometry", crs=ref)
             else:
-                has_overlap = False
+                inter = gpd.GeoDataFrame(columns=["geometry","quelle","area_m2"], geometry="geometry", crs=ref)
 
-            # 0 = blockiert (echte Überlappung) / 1 = frei (nur Touch oder nichts)
+            has_overlap = not inter.empty
+
+            # Score setzen: 0 = blockiert / 1 = frei
             k["K011"] = 0 if has_overlap else 1
+
+            # --- Debug-Output speichern, damit du es dir ansehen kannst ---
+            try:
+                out_geojson = os.path.join(projektpfad, "K011_Ueberlappungen.geojson")
+                out_csv     = os.path.join(projektpfad, "K011_Ueberlappungen_Zusammenfassung.csv")
+
+                if has_overlap:
+                    # Geometrien speichern (für QGIS etc.)
+                    inter.to_file(out_geojson, driver="GeoJSON")
+
+                    # Zusammenfassung nach Quelle
+                    summary = (inter[["quelle","area_m2"]]
+                               .groupby("quelle", as_index=False)
+                               .agg(anzahl=("area_m2","size"), summe_flaeche_m2=("area_m2","sum")))
+                    summary.to_csv(out_csv, index=False)
+                else:
+                    # Leere Dateien schreiben, damit klar ist: keine Overlaps
+                    gpd.GeoDataFrame(geometry=[], crs=ref).to_file(out_geojson, driver="GeoJSON")
+                    pd.DataFrame(columns=["quelle","anzahl","summe_flaeche_m2"]).to_csv(out_csv, index=False)
+            except Exception:
+                # Debug-Ausgabe ist optional; Fehler hier nicht weiterreichen
+                pass
+
 except Exception:
     k["K011"] = np.nan
-
 
 
 
@@ -377,6 +432,7 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
 
 
