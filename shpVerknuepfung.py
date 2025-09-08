@@ -287,32 +287,29 @@ try:
     if ml is None or ml.empty:
         k["K011"] = np.nan
     else:
-        # Referenz-CRS wählen (für Meter-Puffer)
-        ref = next((df.crs for df in (ml,g,go,gp,pl) if df is not None and df.crs is not None), "EPSG:25832")
+        def only_polys(df):
+            if df is None or df.empty:
+                return None
+            df = df[df.geometry.notna()].copy()
+            df = df[df.geometry.type.isin(["Polygon", "MultiPolygon"])]
+            if not df.empty:
+                df["geometry"] = df.geometry.buffer(0)  # Invalids reparieren
+            return df
 
-        def align(df):
-            if df is None or df.empty: return None
-            if df.crs is None: return df.set_crs(ref)
-            return df if df.crs == ref else df.to_crs(ref)
+        parts = []
+        for df in (g, go, gp, pl):
+            p = only_polys(df)
+            if p is not None and not p.empty:
+                parts.append(p[["geometry"]])
 
-        ml, g, go, gp, pl = map(align, (ml, g, go, gp, pl))
-
-        # Blocker sammeln (nur Polygone) und vereinen
-        polys = []
-        for df, src in ((g,"Gebaeude"), (go,"oeffentliche_Gruenflaechen"),
-                        (gp,"private_Gruenflaechen"), (pl,"oeffentliche_Plaetze")):
-            if df is not None and not df.empty:
-                p = df[df.geometry.notna()]
-                p = p[p.geometry.type.isin(["Polygon","MultiPolygon"])].copy()
-                if not p.empty:
-                    p["quelle"] = src
-                    p["geometry"] = p.geometry.buffer(0)  # Invalids fixen
-                    polys.append(p[["geometry","quelle"]])
-
-        if not polys:
+        if not parts:
             k["K011"] = 1
         else:
-            blockers = gpd.GeoDataFrame(pd.concat(polys, ignore_index=True), geometry="geometry", crs=ref)
+            blockers = gpd.GeoDataFrame(
+                pd.concat(parts, ignore_index=True),
+                geometry="geometry",
+                crs=get("Verkehrsmittellinie").crs if hasattr(ml, "crs") else None
+            )
 
             # 3-m-Korridor (±1.5 m) um Mittellinien
             corridors = ml.geometry.buffer(1.5).buffer(0)
@@ -322,24 +319,21 @@ try:
             except Exception:
                 corridor_u = corridors.unary_union
 
-            # Exakte Schnittflächen (nur echte Fläche > Schwelle zählt)
+            cgdf = gpd.GeoDataFrame(geometry=[corridor_u], crs=ml.crs if hasattr(ml, "crs") else None)
+
+            # Exakte Schnittflächen; nur echte Fläche > Schwelle zählt (Touch ignoriert)
             MIN_OVERLAP_M2 = 0.01
-            cgdf = gpd.GeoDataFrame(geometry=[corridor_u], crs=ref)
             mask = blockers.intersects(corridor_u)
-            inter = gpd.overlay(blockers.loc[mask], cgdf, how="intersection") if mask.any() else \
-                    gpd.GeoDataFrame(columns=["geometry","quelle"], geometry="geometry", crs=ref)
-            inter["area_m2"] = inter.geometry.area if not inter.empty else []
+            if mask.any():
+                inter = gpd.overlay(blockers.loc[mask], cgdf, how="intersection", keep_geom_type=False)
+                inter["area_m2"] = inter.geometry.area
+                has_overlap = (inter["area_m2"] > MIN_OVERLAP_M2).any()
+            else:
+                has_overlap = False
 
-            has_overlap = (inter["area_m2"] > MIN_OVERLAP_M2).any() if not inter.empty else False
             k["K011"] = 0 if has_overlap else 1
-
-            # Kurze Debug-Ausgabe
-            tot = float(inter.loc[inter["area_m2"] > MIN_OVERLAP_M2, "area_m2"].sum()) if has_overlap else 0.0
-            print(f"[K011] has_overlap={has_overlap} → Score={k['K011']} | sum>{MIN_OVERLAP_M2}m²: {tot:.6f}", flush=True)
-
 except Exception:
     k["K011"] = np.nan
-
 
 
 # K012 - Anteil Dachbegruenung
@@ -382,3 +376,4 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
