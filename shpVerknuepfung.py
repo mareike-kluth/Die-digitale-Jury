@@ -277,129 +277,69 @@ except Exception:
 
 
 # K011 - Rettungswege, Mindestwegbreite
-# K011 – Rettungswege, Mindestwegbreite (Gebäude + Grünflächen + öffentliche Plätze)
-# Debug: gibt am Ende aus, ob Overlap vorliegt (True/False), Anzahl & Flächensumme.
 try:
-    ml  = get("Verkehrsmittellinie")
-    g   = get("Gebaeude")
-    go  = get("oeffentliche_Gruenflaechen")
-    gp  = get("private_Gruenflaechen")
-    pl  = get("oeffentliche_Plaeze") if "oeffentliche_Plaeze" in layers else get("oeffentliche_Plaetze")
+    ml = get("Verkehrsmittellinie")
+    g  = get("Gebaeude")
+    go = get("oeffentliche_Gruenflaechen")
+    gp = get("private_Gruenflaechen")
+    pl = get("oeffentliche_Plaetze") 
 
-    # Referenz-CRS (für Meter-Puffer); fallback auf EPSG:25832
-    ref = (ml.crs if ml is not None and ml.crs is not None else "EPSG:25832")
-
-    def align(df):
-        if df is None or df.empty:
-            return None
-        if df.crs is None:
-            return df.set_crs(ref)
-        if df.crs != ref:
-            return df.to_crs(ref)
-        return df
-
-    ml  = align(ml)
-    g   = align(g)
-    go  = align(go)
-    gp  = align(gp)
-    pl  = align(pl)
-
-    # Blocker sammeln und eine Quelle mitgeben
-    raw_blockers = []
-    if g  is not None and not g.empty:   raw_blockers.append(g.assign(quelle="Gebaeude"))
-    if go is not None and not go.empty:  raw_blockers.append(go.assign(quelle="oeffentliche_Gruenflaechen"))
-    if gp is not None and not gp.empty:  raw_blockers.append(gp.assign(quelle="private_Gruenflaechen"))
-    if pl is not None and not pl.empty:  raw_blockers.append(pl.assign(quelle="oeffentliche_Plaetze"))
-
-    # Frühe Abzweige
     if ml is None or ml.empty:
         k["K011"] = np.nan
-        print("[K011] Keine Verkehrsmittellinie vorhanden → K011 = NaN", flush=True)
-
-    elif not raw_blockers:
-        k["K011"] = 1
-        print("[K011] Keine Blocker-Layer vorhanden → K011 = 1 (frei)", flush=True)
-
     else:
-        # Nur Polygon-/MultiPolygon-Blocker verwenden und Geometrien säubern
-        def only_polys(df):
-            df = df[df.geometry.notna()].copy()
-            df = df[df.geometry.type.isin(["Polygon", "MultiPolygon"])]
-            if not df.empty:
-                df["geometry"] = df.geometry.buffer(0)  # repariert häufige Invalids
-            return df
+        # Referenz-CRS wählen (für Meter-Puffer)
+        ref = next((df.crs for df in (ml,g,go,gp,pl) if df is not None and df.crs is not None), "EPSG:25832")
 
-        blockers = [only_polys(df) for df in raw_blockers]
-        blockers = [df for df in blockers if not df.empty]
+        def align(df):
+            if df is None or df.empty: return None
+            if df.crs is None: return df.set_crs(ref)
+            return df if df.crs == ref else df.to_crs(ref)
 
-        if not blockers:
+        ml, g, go, gp, pl = map(align, (ml, g, go, gp, pl))
+
+        # Blocker sammeln (nur Polygone) und vereinen
+        polys = []
+        for df, src in ((g,"Gebaeude"), (go,"oeffentliche_Gruenflaechen"),
+                        (gp,"private_Gruenflaechen"), (pl,"oeffentliche_Plaetze")):
+            if df is not None and not df.empty:
+                p = df[df.geometry.notna()]
+                p = p[p.geometry.type.isin(["Polygon","MultiPolygon"])].copy()
+                if not p.empty:
+                    p["quelle"] = src
+                    p["geometry"] = p.geometry.buffer(0)  # Invalids fixen
+                    polys.append(p[["geometry","quelle"]])
+
+        if not polys:
             k["K011"] = 1
-            print("[K011] Blocker enthalten keine Polygone → K011 = 1 (frei)", flush=True)
         else:
-            # 3-m-Korridor (±1.5 m) um Mittellinien, vereinigen & säubern
+            blockers = gpd.GeoDataFrame(pd.concat(polys, ignore_index=True), geometry="geometry", crs=ref)
+
+            # 3-m-Korridor (±1.5 m) um Mittellinien
             corridors = ml.geometry.buffer(1.5).buffer(0)
             try:
-                from shapely import union_all  # Shapely 2+
+                from shapely import union_all
                 corridor_u = union_all(corridors)
             except Exception:
-                corridor_u = corridors.unary_union  # Fallback
+                corridor_u = corridors.unary_union
 
-            corridor_gdf = gpd.GeoDataFrame(geometry=[corridor_u], crs=ref)
+            # Exakte Schnittflächen (nur echte Fläche > Schwelle zählt)
+            MIN_OVERLAP_M2 = 0.01
+            cgdf = gpd.GeoDataFrame(geometry=[corridor_u], crs=ref)
+            mask = blockers.intersects(corridor_u)
+            inter = gpd.overlay(blockers.loc[mask], cgdf, how="intersection") if mask.any() else \
+                    gpd.GeoDataFrame(columns=["geometry","quelle"], geometry="geometry", crs=ref)
+            inter["area_m2"] = inter.geometry.area if not inter.empty else []
 
-            # Blocker zusammenführen (als GeoDataFrame!)
-            all_blockers = gpd.GeoDataFrame(
-                pd.concat([b[["geometry","quelle"]] for b in blockers], ignore_index=True),
-                geometry="geometry", crs=ref
-            )
-
-            # Grobfilter: nur Blocker, die überhaupt schneiden
-            mask = all_blockers.intersects(corridor_u)
-
-            if mask.any():
-                # Exakte Schnittflächen (nur echte Überdeckung, kein "touch")
-                inter = gpd.overlay(all_blockers.loc[mask], corridor_gdf, how="intersection", keep_geom_type=False)
-                if not inter.empty:
-                    inter["area_m2"] = inter.geometry.area
-                    inter = inter[inter["area_m2"] > 1e-6].copy()  # Toleranz gg. numerisches Rauschen
-                else:
-                    inter = gpd.GeoDataFrame(columns=["geometry","quelle","area_m2"], geometry="geometry", crs=ref)
-            else:
-                inter = gpd.GeoDataFrame(columns=["geometry","quelle","area_m2"], geometry="geometry", crs=ref)
-
-            has_overlap = not inter.empty
+            has_overlap = (inter["area_m2"] > MIN_OVERLAP_M2).any() if not inter.empty else False
             k["K011"] = 0 if has_overlap else 1
 
-            # ------- KLARE DEBUG-AUSGABEN -------
-            total_count = 0 if inter.empty else int(inter.shape[0])
-            total_area  = 0.0 if inter.empty else float(inter["area_m2"].sum())
-            print(f"[K011] has_overlap={has_overlap}  →  Score={k['K011']} (0=blockiert, 1=frei)", flush=True)
-            print(f"[K011] Overlap-Features: {total_count}, Summe Fläche: {total_area:.6f} m²", flush=True)
-            if has_overlap:
-                try:
-                    grp = inter.groupby("quelle")["area_m2"].agg(['size','sum']).reset_index()
-                    print("[K011] Verteilung nach Quelle:", flush=True)
-                    print(grp.to_string(index=False), flush=True)
-                except Exception:
-                    pass
-
-            # Optional: Artefakte speichern (für QGIS/CSV-Check)
-            try:
-                out_geojson = os.path.join(projektpfad, "K011_Ueberlappungen.geojson")
-                out_csv     = os.path.join(projektpfad, "K011_Ueberlappungen_Zusammenfassung.csv")
-                if has_overlap:
-                    inter.to_file(out_geojson, driver="GeoJSON")
-                    inter.groupby("quelle")["area_m2"]\
-                        .agg(anzahl="size", summe_flaeche_m2="sum")\
-                        .reset_index().to_csv(out_csv, index=False)
-                else:
-                    # leere Dateien, damit klar ist: keine Overlaps
-                    gpd.GeoDataFrame(geometry=[], crs=ref).to_file(out_geojson, driver="GeoJSON")
-                    pd.DataFrame(columns=["quelle","anzahl","summe_flaeche_m2"]).to_csv(out_csv, index=False)
-            except Exception:
-                pass
+            # Kurze Debug-Ausgabe
+            tot = float(inter.loc[inter["area_m2"] > MIN_OVERLAP_M2, "area_m2"].sum()) if has_overlap else 0.0
+            print(f"[K011] has_overlap={has_overlap} → Score={k['K011']} | sum>{MIN_OVERLAP_M2}m²: {tot:.6f}", flush=True)
 
 except Exception:
     k["K011"] = np.nan
+
 
 
 # K012 - Anteil Dachbegruenung
@@ -442,29 +382,3 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
