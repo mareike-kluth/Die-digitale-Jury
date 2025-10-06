@@ -91,18 +91,18 @@ Nach der automatischen Bewertung kannst du:
 
 # Kriterien-Handbuch (PDF) nach Layerstruktur anzeigen 
 st.markdown("---")
-st.subheader("Kriterien-Handbuch (Download & Vorschau)")
+st.subheader("Handbuch-Kriterien (Download & Vorschau)")
 
-DEFAULT_PDF_PATH = Path("assets/Kriterien_Handbuch.pdf")
+DEFAULT_PDF_PATH = Path("assets/Handbuch-Kriterien.pdf")
 
 if DEFAULT_PDF_PATH.exists():
     pdf_bytes = DEFAULT_PDF_PATH.read_bytes()
 
     # Download-Button
     st.download_button(
-        label="Kriterien-Handbuch herunterladen",
+        label="Handbuch-Kriterien herunterladen",
         data=pdf_bytes,
-        file_name="Kriterien_Handbuch.pdf",
+        file_name="Handbuch-Kriterien.pdf",
         mime="application/pdf",
         use_container_width=True
     )
@@ -117,10 +117,10 @@ if DEFAULT_PDF_PATH.exists():
             style="border:1px solid #ccc; border-radius:8px;"
         ></iframe>
     '''
-    with st.expander("Kriterien-Handbuch öffnen", expanded=False):
+    with st.expander("Handbuch-Kriterien öffnen", expanded=False):
         components.html(pdf_html, height=860, scrolling=False)
 else:
-    st.warning("Kriterien-Handbuch konnte nicht gefunden werden. Bitte sicherstellen, dass es unter `assets/Kriterien_Handbuch.pdf` liegt.")
+    st.warning("Handbuch-Kriterien konnte nicht gefunden werden.")
 st.markdown("---")
 
 
@@ -300,5 +300,6 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
