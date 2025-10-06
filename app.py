@@ -117,6 +117,15 @@ st.markdown("""
 
 Nutze das Upload-Feld unten, um deine **ZIP-Datei** hochzuladen.  
 Du kannst auch **mehrere ZIPs gleichzeitig** hochladen, um Entwürfe direkt zu vergleichen.
+""")
+
+uploaded_files = st.file_uploader(
+    "Entwürfe als ZIP hochladen",
+    type="zip",
+    accept_multiple_files=True
+)
+
+st.markdown("""
 
 ---
 
@@ -125,14 +134,8 @@ Du kannst auch **mehrere ZIPs gleichzeitig** hochladen, um Entwürfe direkt zu v
 Nach der automatischen Bewertung kannst du:
 - alle berechneten Kriterien und die Sternebewertung einsehen
 - die Ergebnisse als **Excel-Datei herunterladen**
-
 """)
 
-uploaded_files = st.file_uploader(
-    "Entwürfe als ZIP hochladen",
-    type="zip",
-    accept_multiple_files=True
-)
 
 MODEL_PATH = "final_RF_model.pkl"
 try:
@@ -286,6 +289,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
