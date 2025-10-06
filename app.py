@@ -9,6 +9,9 @@ import geopandas as gpd
 import joblib
 import glob
 import sys
+import base64
+from pathlib import Path
+import streamlit.components.v1 as components
 
 
 # Einstellungen & Metadaten
@@ -84,6 +87,57 @@ Nach der automatischen Bewertung kannst du:
 - die Ergebnisse als **Excel-Datei herunterladen**
 
 """)
+
+# Kriterien-Handbuch (PDF) anzeigen/Download 
+
+st.subheader("Kriterien-Handbuch (PDF)")
+
+DEFAULT_PDF_PATH = Path("assets/Kriterien_Handbuch.pdf")
+
+col1, col2 = st.columns([2, 1])
+with col1:
+    uploaded_pdf = st.file_uploader(
+        "Optional: eigenes PDF mit Kriterien-Erklärungen hochladen",
+        type=["pdf"],
+        accept_multiple_files=False,
+        key="pdf_kriterien_upload"
+    )
+
+pdf_bytes = None
+pdf_name = None
+
+if uploaded_pdf is not None:
+    pdf_bytes = uploaded_pdf.read()
+    pdf_name = uploaded_pdf.name
+elif DEFAULT_PDF_PATH.exists():
+    pdf_bytes = DEFAULT_PDF_PATH.read_bytes()
+    pdf_name = DEFAULT_PDF_PATH.name
+
+if pdf_bytes:
+    # Download-Button
+    with col2:
+        st.download_button(
+            label="PDF herunterladen",
+            data=pdf_bytes,
+            file_name=pdf_name or "Kriterien_Handbuch.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+
+    # Inline-Viewer
+    b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+    pdf_html = f'''
+        <iframe
+            src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&view=fitH"
+            width="100%"
+            height="800"
+            style="border:none;"
+        ></iframe>
+    '''
+    with st.expander("Kriterien-Handbuch öffnen", expanded=True):
+        components.html(pdf_html, height=820, scrolling=False)
+else:
+    st.info("Kein Kriterien-Handbuch gefunden. Lade eine PDF hoch oder lege sie unter `assets/Kriterien_Handbuch.pdf` ab.")
 
 
 uploaded_files = st.file_uploader(
@@ -262,3 +316,4 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
