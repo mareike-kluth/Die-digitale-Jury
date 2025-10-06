@@ -77,6 +77,13 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhan
 st.markdown("---")
 st.subheader("Handbuch-Kriterien (Download & Vorschau)")
 
+st.markdown("""
+Das **Handbuch-Kriterien** erläutert alle **13 Bewertungs­kriterien** der *Digitalen Jury* im Detail.  
+Es beschreibt, **wie jedes Kriterium berechnet** bzw. **bemessen** wird, welche Daten aus den **GIS-Layern** benötigt werden  
+und worauf bei der **Vorbereitung der Entwurfsdaten** zu achten ist. Somit kann das Handbuch als Orientierung bei der **Datenaufbereitung in GIS**,  
+zur **Nachvollziehbarkeit der automatischen Bewertung** sowie als **Hilfestellung für die Interpretation der Ergebnisse** dienen.
+""")
+
 DEFAULT_PDF_PATH = Path("assets/Handbuch-Kriterien.pdf")
 
 if DEFAULT_PDF_PATH.exists():
@@ -299,7 +306,6 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
-
 
 
 
