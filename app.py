@@ -88,56 +88,40 @@ Nach der automatischen Bewertung kannst du:
 
 """)
 
-# Kriterien-Handbuch (PDF) anzeigen/Download 
 
-st.subheader("Kriterien-Handbuch (PDF)")
+# Kriterien-Handbuch (PDF) nach Layerstruktur anzeigen 
+st.markdown("---")
+st.subheader("Kriterien-Handbuch (Download & Vorschau)")
 
 DEFAULT_PDF_PATH = Path("assets/Kriterien_Handbuch.pdf")
 
-col1, col2 = st.columns([2, 1])
-with col1:
-    uploaded_pdf = st.file_uploader(
-        "Optional: eigenes PDF mit Kriterien-Erklärungen hochladen",
-        type=["pdf"],
-        accept_multiple_files=False,
-        key="pdf_kriterien_upload"
+if DEFAULT_PDF_PATH.exists():
+    pdf_bytes = DEFAULT_PDF_PATH.read_bytes()
+
+    # Download-Button
+    st.download_button(
+        label="Kriterien-Handbuch herunterladen",
+        data=pdf_bytes,
+        file_name="Kriterien_Handbuch.pdf",
+        mime="application/pdf",
+        use_container_width=True
     )
 
-pdf_bytes = None
-pdf_name = None
-
-if uploaded_pdf is not None:
-    pdf_bytes = uploaded_pdf.read()
-    pdf_name = uploaded_pdf.name
-elif DEFAULT_PDF_PATH.exists():
-    pdf_bytes = DEFAULT_PDF_PATH.read_bytes()
-    pdf_name = DEFAULT_PDF_PATH.name
-
-if pdf_bytes:
-    # Download-Button
-    with col2:
-        st.download_button(
-            label="PDF herunterladen",
-            data=pdf_bytes,
-            file_name=pdf_name or "Kriterien_Handbuch.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
-
-    # Inline-Viewer
+    # Inline PDF-Viewer
     b64 = base64.b64encode(pdf_bytes).decode("utf-8")
     pdf_html = f'''
         <iframe
             src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&view=fitH"
             width="100%"
-            height="800"
-            style="border:none;"
+            height="850"
+            style="border:1px solid #ccc; border-radius:8px;"
         ></iframe>
     '''
-    with st.expander("Kriterien-Handbuch öffnen", expanded=True):
-        components.html(pdf_html, height=820, scrolling=False)
+    with st.expander("Kriterien-Handbuch öffnen", expanded=False):
+        components.html(pdf_html, height=860, scrolling=False)
 else:
-    st.info("Kein Kriterien-Handbuch gefunden. Lade eine PDF hoch oder lege sie unter `assets/Kriterien_Handbuch.pdf` ab.")
+    st.warning("Kriterien-Handbuch konnte nicht gefunden werden. Bitte sicherstellen, dass es unter `assets/Kriterien_Handbuch.pdf` liegt.")
+st.markdown("---")
 
 
 uploaded_files = st.file_uploader(
@@ -316,4 +300,5 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
