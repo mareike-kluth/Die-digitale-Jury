@@ -271,7 +271,6 @@ if uploaded_files:
                 df_show = X.iloc[[0]].T.reset_index()
                 df_show.columns = ["Kriterium", "Wert"]
                 df_show["Kriterium"] = df_show["Kriterium"].map(NAMEN).fillna(df_show["Kriterium"])
-                st.subheader("Eingabewerte (Modell-Features)")
                 st.dataframe(df_show, hide_index=True)
 
                 # --- Download
@@ -287,6 +286,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
