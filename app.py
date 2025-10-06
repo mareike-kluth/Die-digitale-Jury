@@ -33,7 +33,7 @@ Dieses Tool bewertet städtebauliche Entwürfe **automatisch** anhand von **13 K
 **Entwurf vorbereiten:**  
 Speichere deine Geodaten der Entwürfe im **Shapefile-Format** (`.shp`) mit den **exakten Dateinamen** (siehe Tabelle unten).  
 Jedes `.shp` benötigt seine zugehörigen Begleitdateien (`.shx`, `.dbf`, `.prj`).  
-Diese müssen **alle zusammen** in **einer ZIP-Datei** gepackt werden.
+Diese müssen **alle zusammen** in **eine ZIP-Datei** gepackt werden.
 
 Die Kriterien werden automatisch berechnet, fehlende Werte werden mit `0` ersetzt.  
 Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis 5 Sternen**.
@@ -44,9 +44,9 @@ Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis
 
 **Wichtig:** 
 In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
-Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Tabelle.  
+Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Attributtabelle.  
 Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein, wie unten angegeben. Beachte auch die Groß- und Kleinschreibung. 
-Alle Dateien müssen im passenden **Koordinatensystem** vorliegen.
+Alle Dateien müssen im einheitlichen **Koordinatensystem** vorliegen.
 
 Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
 Wenn ein Layer oder Attribut fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
@@ -63,14 +63,13 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhan
 | `Verkehrsmittellinie.shp` | – |
 | `oeffentliche_Gruenflaechen.shp` | `Nutzung` | 
 | `private_Gruenflaechen.shp` | – |
-| `oeffentliche_Plaetze` | – |
+| `oeffentliche_Plaetze.shp` | – |
 | `Wasser.shp` | – |
 | `Baeume_Entwurf.shp` | – | 
 | `Bestandsbaeume.shp` | – | 
 | `Bestandsgruen.shp` | – | 
 | `Gebietsabgrenzung.shp` | – | 
 
----
 """)
 
 # Kriterien-Handbuch (PDF) nach Layerstruktur anzeigen 
@@ -79,8 +78,7 @@ st.subheader("Handbuch-Kriterien (Download & Vorschau)")
 
 st.markdown("""
 Das **Handbuch-Kriterien** erläutert alle **13 Bewertungs­kriterien** der *Digitalen Jury* im Detail.  
-Es beschreibt, **wie jedes Kriterium berechnet** bzw. **bemessen** wird, welche Daten aus den **GIS-Layern** benötigt werden  
-und worauf bei der **Vorbereitung der Entwurfsdaten** zu achten ist. Somit kann das Handbuch als Orientierung bei der **Datenaufbereitung in GIS**,  
+Es beschreibt, **wie jedes Kriterium berechnet** bzw. **bemessen** wird, welche Daten aus den **GIS-Layern** benötigt werden und worauf bei der **Vorbereitung der Entwurfsdaten** zu achten ist. Somit kann das Handbuch als Orientierung bei der **Datenaufbereitung in GIS**,  
 zur **Nachvollziehbarkeit der automatischen Bewertung** sowie als **Hilfestellung für die Interpretation der Ergebnisse** dienen.
 """)
 
@@ -250,12 +248,6 @@ if uploaded_files:
                 X = pd.DataFrame({f: pd.to_numeric(df_raw.get(f), errors="coerce") for f in FEATURE_ORDER})
                 X = X.fillna(0.0).astype(float)
 
-                # Sanity: Anteil Nullen & Anzeige der echten Inputwerte
-                zero_share = float((X.iloc[0] == 0).mean()) if not X.empty else 1.0
-                st.caption(f"Null-Anteil im Featurevektor: {zero_share:.0%}")
-                if zero_share >= 0.8:
-                    st.warning("Sehr viele 0-Werte → wenig Signal. Prüfe fehlende Layer/CRS/`Gebietsabgrenzung`/NaNs in K-Werten.")
-
                 # --- Vorhersage
                 try:
                     y_hat = rf_model.predict(X)[0]
@@ -266,20 +258,9 @@ if uploaded_files:
 
                 st.success(f"⭐️ Bewertung: **{sterne} Sterne**")
 
-                # Wahrscheinlichkeiten (falls Classifier)
-                if hasattr(rf_model, "predict_proba"):
-                    try:
-                        proba = rf_model.predict_proba(X)[0]
-                        classes = list(getattr(rf_model, "classes_", range(len(proba))))
-                        prob_df = pd.DataFrame({"Sterne": classes, "p": proba}).sort_values("Sterne")
-                        with st.expander("Vorhersage-Wahrscheinlichkeiten"):
-                            st.dataframe(prob_df, hide_index=True)
-                    except Exception:
-                        pass
-
                 # --- Werte anzeigen
                 NAMEN = {
-                    "K002":"Zukunftsfähige Mobilität", "K003":"Anteil Freiflächen",
+                    "K002":"Zukunftsfähige Mobilität", "K003":"Anteil Grünflächen",
                     "K004":"Einbettung Umgebung", "K005":"Lärmschutz",
                     "K006":"Erhalt Bestandgebäude", "K007":"PV-Anteil",
                     "K008":"Nutzungsvielfalt Freiflächen", "K009":"Zugang Wasser",
@@ -306,6 +287,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
