@@ -71,23 +71,7 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhan
 | `Gebietsabgrenzung.shp` | – | 
 
 ---
-
-
-### **Hochladen**
-
-Nutze das Upload-Feld unten, um deine **ZIP-Datei** hochzuladen.  
-Du kannst auch **mehrere ZIPs gleichzeitig** hochladen, um Entwürfe direkt zu vergleichen.
-
----
-
-### **Ergebnis & Download**
-
-Nach der automatischen Bewertung kannst du:
-- alle berechneten Kriterien und die Sternebewertung einsehen
-- die Ergebnisse als **Excel-Datei herunterladen**
-
 """)
-
 
 # Kriterien-Handbuch (PDF) nach Layerstruktur anzeigen 
 st.markdown("---")
@@ -123,6 +107,21 @@ else:
     st.warning("Handbuch-Kriterien konnte nicht gefunden werden.")
 st.markdown("---")
 
+st.markdown("""
+### **Hochladen**
+
+Nutze das Upload-Feld unten, um deine **ZIP-Datei** hochzuladen.  
+Du kannst auch **mehrere ZIPs gleichzeitig** hochladen, um Entwürfe direkt zu vergleichen.
+
+---
+
+### **Ergebnis & Download**
+
+Nach der automatischen Bewertung kannst du:
+- alle berechneten Kriterien und die Sternebewertung einsehen
+- die Ergebnisse als **Excel-Datei herunterladen**
+
+""")
 
 uploaded_files = st.file_uploader(
     "Entwürfe als ZIP hochladen",
@@ -300,6 +299,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
