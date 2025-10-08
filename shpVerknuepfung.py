@@ -1,4 +1,3 @@
-# Bemessung der 13 Bewertungskriterien
 import geopandas as gpd
 import pandas as pd
 import os
@@ -36,12 +35,12 @@ for name in layer_namen:
     else:
         layers[name] = None
 
-# Kriterien berechnen
+# --- Kriterien berechnen
 k = {}   # Dictionary für alle K-Werte
 
 get = lambda name: layers.get(name, None)
 
-# Gebietsflaeche berechnen (wenn Layer vorhanden)
+# --- Gebietsflaeche berechnen (wenn Layer vorhanden)
 if get("Gebietsabgrenzung") is not None:
     gebietsflaeche = get("Gebietsabgrenzung").geometry.area.sum()
 else:
@@ -179,7 +178,6 @@ except:
     
 
 # K007 - energetische Standards: Anteil PV-Anlagen
-# Verhältnis PV-Fläche zu gesamter Gebäudefläche (als Dachfläche angenommen)
 try:
     g = get("Gebaeude")
     pv = get("PV_Anlage")
@@ -229,7 +227,6 @@ try:
         access_layers = [gdf for gdf in (oeff, plaetze) if gdf is not None and not gdf.empty]
 
         if access_layers:
-            # Geometrien zusammenführen und Shapely-2-kompatibel vereinigen
             geoms = pd.concat([gdf.geometry for gdf in access_layers], ignore_index=True)
             access_union = geoms.union_all() if hasattr(geoms, "union_all") else geoms.unary_union
             access_buf = access_union.buffer(2)
@@ -248,7 +245,6 @@ except Exception:
 
 
 # K010 - Entsiegelung
-# Veränderung des Grünflächenanteils (neu vs. Bestand)
 try:
     alt  = get("Bestandsgruen")
     oeff = get("oeffentliche_Gruenflaechen")
@@ -321,7 +317,7 @@ try:
 
             cgdf = gpd.GeoDataFrame(geometry=[corridor_u], crs=ml.crs if hasattr(ml, "crs") else None)
 
-            # Exakte Schnittflächen; nur echte Fläche > Schwelle zählt (Touch ignoriert)
+            # Exakte Schnittflächen
             MIN_OVERLAP_M2 = 0.01
             mask = blockers.intersects(corridor_u)
             if mask.any():
@@ -337,7 +333,6 @@ except Exception:
 
 
 # K012 - Anteil Dachbegruenung
-# Gesamte Gebäudefläche = angenommene Dachfläche
 try:
     dach = get("Dachgruen")
     g = get("Gebaeude")
@@ -376,4 +371,5 @@ except:
 # Endausgabe der Kriterienbewertung aller Kriterien
 df_kriterien = pd.DataFrame([k])
 df_kriterien.to_excel(os.path.join(projektpfad, "Kriterien_Ergebnisse.xlsx"), index=False)
+
 
