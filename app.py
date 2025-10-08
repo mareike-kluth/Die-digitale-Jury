@@ -24,16 +24,16 @@ st.title("Die Digitale Jury – objektive Bewertung städtebaulicher Entwürfe")
 st.markdown("""
 ######
 Willkommen bei der **digitalen Jury**!  
-Dieses Tool bewertet städtebauliche Entwürfe **automatisch** anhand von **13 Kriterien** mit einem trainierten **Random-Forest-Modell**.
+Das Tool ermöglicht die automatische Bewertung städtebaulicher Entwürfe anhand von **13 definierten Kriterien**. Grundlage bildet ein **trainiertes Random-Forest-Modell**, das die Bewertung datenbasiert vornimmt.
 
 ---
 
 ### **So funktioniert es**
 
 **Entwurf vorbereiten:**  
-Speichere deine Geodaten der Entwürfe im **Shapefile-Format** (`.shp`) mit den **exakten Dateinamen** (siehe Tabelle unten).  
+Speichere die Geodaten der Entwürfe im **Shapefile-Format** (`.shp`) mit den **exakten Dateinamen** (siehe Tabelle unten). 
 Jedes `.shp` benötigt seine zugehörigen Begleitdateien (`.shx`, `.dbf`, `.prj`).  
-Diese müssen **alle zusammen** in **eine ZIP-Datei** gepackt werden.
+Alle zu einem Entwurf gehörenden Dateien sind sind anschließend **in einer gemeinsamen ZIP-Datei** zu speichern und hochzuladen (je Entwurf eine ZIP-Datei).
 
 Die Kriterien werden automatisch berechnet, fehlende Werte werden mit `0` ersetzt.  
 Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis 5 Sternen**.
@@ -46,7 +46,9 @@ Die **Digitale Jury** vergibt jedem Entwurf eine objektive Bewertung von **1 bis
 In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attributtabelle korrekt vorhanden sein.  
 Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Attributtabelle.  
 Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein, wie unten angegeben. Beachte auch die Groß- und Kleinschreibung. 
-Alle Dateien müssen im einheitlichen **Koordinatensystem** vorliegen.
+Alle Dateien müssen in einem einheitlichen **Koordinatensystem** vorliegen.
+Achte darauf, dass sich die Geometrien innerhalb des Bewertungsgebiets nicht überschneiden oder mehrfach vorkommen.
+Überlagerungen, sowohl innerhalb eines Layers als auch zwischen verschiedenen Layern, können zu fehlerhaften Berechnungen führen, beispielsweise durch doppelt gezählte Flächenanteile oder unklare Abgrenzungen.
 
 Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
 Wenn ein Layer oder Attribut fehlt oder falsch benannt ist, kann das entsprechende Kriterium **nicht berechnet werden** und wird automatisch mit `0` bewertet.
@@ -77,7 +79,7 @@ st.markdown("---")
 st.subheader("Handbuch-Kriterien (Download & Vorschau)")
 
 st.markdown("""
-Das **Handbuch-Kriterien** erläutert alle **13 Bewertungs­kriterien** der *Digitalen Jury* im Detail.  
+Das **Handbuch-Kriterien** erläutert alle **13 Bewertungs­kriterien** der Digitalen Jury im Detail.  
 Es beschreibt, **wie jedes Kriterium berechnet** bzw. **bemessen** wird, welche Daten aus den **GIS-Layern** benötigt werden und worauf bei der **Vorbereitung der Entwurfsdaten** zu achten ist. Somit kann das Handbuch als Orientierung bei der **Datenaufbereitung in GIS**,  
 zur **Nachvollziehbarkeit der automatischen Bewertung** sowie als **Hilfestellung für die Interpretation der Ergebnisse** dienen.
 """)
@@ -95,19 +97,6 @@ if DEFAULT_PDF_PATH.exists():
         mime="application/pdf",
         use_container_width=True
     )
-
-    # Inline PDF-Viewer
-    b64 = base64.b64encode(pdf_bytes).decode("utf-8")
-    pdf_html = f'''
-        <iframe
-            src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&view=fitH"
-            width="100%"
-            height="850"
-            style="border:1px solid #ccc; border-radius:8px;"
-        ></iframe>
-    '''
-    with st.expander("Handbuch-Kriterien öffnen", expanded=False):
-        components.html(pdf_html, height=860, scrolling=False)
 else:
     st.warning("Handbuch-Kriterien konnte nicht gefunden werden.")
 st.markdown("---")
@@ -289,6 +278,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
