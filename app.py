@@ -14,7 +14,7 @@ from pathlib import Path
 import streamlit.components.v1 as components
 
 
-# Einstellungen & Metadaten
+# --- Einstellungen & Hinweise
 
 st.set_page_config(
     page_title="Die Digitale Jury",
@@ -74,7 +74,7 @@ Bitte stelle sicher, dass deine ZIP-Datei folgende Layer enthält (sofern vorhan
 
 """)
 
-# Kriterien-Handbuch (PDF) nach Layerstruktur anzeigen 
+# --- Kriterien-Handbuch (PDF) nach Layerstruktur anzeigen 
 st.markdown("---")
 st.subheader("Handbuch-Kriterien (Download & Vorschau)")
 
@@ -89,7 +89,7 @@ DEFAULT_PDF_PATH = Path("assets/Handbuch-Kriterien.pdf")
 if DEFAULT_PDF_PATH.exists():
     pdf_bytes = DEFAULT_PDF_PATH.read_bytes()
 
-    # Download-Button
+    # --- Download-Button
     st.download_button(
         label="Handbuch-Kriterien herunterladen",
         data=pdf_bytes,
@@ -140,12 +140,9 @@ except Exception as e:
     st.error(f"Bewertungsmodell konnte nicht geladen werden: {e}")
     st.stop()
 
-# Wenn Modell eigene Featureliste kennt, nutze sie
 FEATURE_ORDER = list(getattr(rf_model, "feature_names_in_", FEATURE_ORDER))
 
-# --------------------------------------
-# Verarbeitung
-# --------------------------------------
+# --- Verarbeitung
 if uploaded_files:
     for zip_file in uploaded_files:
         st.write(f"Hochgeladen: `{zip_file.name}`")
@@ -166,7 +163,7 @@ if uploaded_files:
                 if missing_layers:
                     st.warning("Fehlende Layer: " + ", ".join(missing_layers))
                 
-                # --- Attribut-Checks (nur für vorhandene Layer; keine zweite 'fehlt!'-Meldung) ---
+                # --- Attribut-Checks
                 erwartete_attributs = {
                     "Verkehrsflaechen": ["Nutzung"],
                     "Gebaeude": ["Geb_Hoehe"],
@@ -176,7 +173,7 @@ if uploaded_files:
                 for layer_name, attrs in erwartete_attributs.items():
                     shp_path = os.path.join(tmpdir, f"{layer_name}.shp")
                 
-                    # Wenn der Layer fehlt, hier NICHT nochmal warnen (bereits oben gesammelt)
+                    
                     if not os.path.exists(shp_path):
                         continue
                 
@@ -205,7 +202,7 @@ if uploaded_files:
                     capture_output=True,
                     text=True
                 )
-                # Log anzeigen (hilft enorm beim Debuggen)
+                # --- Log anzeigen 
                 if result.returncode != 0:
                     st.error("Fehler beim Ausführen von shpVerknuepfung.py")
                     if result.stderr:
@@ -235,8 +232,7 @@ if uploaded_files:
                     st.error(f"Kriterien_Ergebnisse.xlsx konnte nicht gelesen werden: {e}")
                     st.stop()
 
-                # --- Sichere Feature-Matrix exakt wie im Training
-                # -> Spalten fehlend? mit 0 ergänzen. Extra-Spalten? ignorieren.
+                # --- Sichert Feature-Matrix 
                 X = pd.DataFrame({f: pd.to_numeric(df_raw.get(f), errors="coerce") for f in FEATURE_ORDER})
                 X = X.fillna(0.0).astype(float)
 
@@ -278,6 +274,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
