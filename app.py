@@ -47,7 +47,7 @@ In jeder Shapefile müssen die unten genannten **Spalten (Felder)** in der Attri
 Jedes Objekt, wie z. B. ein Gebäude oder eine Fläche, ist dabei eine **Zeile** in der Attributtabelle.  
 Die **Layer-Namen**, **Spalten-Namen** und **Attributwerte** müssen **exakt** so geschrieben sein, wie unten angegeben. Beachte auch die Groß- und Kleinschreibung. 
 Alle Dateien müssen in einem einheitlichen **Koordinatensystem** vorliegen.
-Achte darauf, dass sich die Geometrien innerhalb des Bewertungsgebiets nicht überschneiden oder mehrfach vorkommen.
+Achte darauf, dass sich die Geometrien innerhalb des Bewertungsgebiets **nicht überschneiden oder mehrfach vorkommen**.
 Überlagerungen, sowohl innerhalb eines Layers als auch zwischen verschiedenen Layern, können zu fehlerhaften Berechnungen führen, beispielsweise durch doppelt gezählte Flächenanteile oder unklare Abgrenzungen.
 
 Verwende **korrekte, vollständige Geometrien** – leere oder fehlerhafte Layer führen zu unvollständigen Ergebnissen.
@@ -278,6 +278,7 @@ if uploaded_files:
                         file_name=f"Bewertung_{zip_file.name}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
 
 
 
